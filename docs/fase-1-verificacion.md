@@ -52,3 +52,58 @@ pnpm --filter api db:seed
 - `apps/api/prisma/dev.db`
 - `apps/api/generated/`
 - `apps/web/dist/`
+
+## Bloque 2: backend Auth/Users
+
+### Que se hizo
+
+- Se agregaron endpoints:
+  - `POST /auth/login`
+  - `POST /auth/refresh`
+  - `POST /auth/logout`
+  - `POST /auth/change-password`
+  - `GET /users`
+  - `POST /users/invite`
+- Se agrego JWT con Passport.
+- Se agrego guard de roles con `@Roles(...)`.
+- Se agrego `@CurrentUser()`.
+- Se agrego invitacion manual con password temporal.
+- Se agrego bloqueo de rutas cuando el JWT trae `scope: password-change-only`.
+- Se agrego rate limit al login.
+
+### Prueba manual segura
+
+Levanta la API:
+
+```bash
+pnpm api:dev
+```
+
+En otra terminal:
+
+```bash
+curl http://localhost:3000
+```
+
+Debe responder:
+
+```json
+{"name":"StatsForge API","status":"ok"}
+```
+
+Login inicial:
+
+```bash
+curl -X POST http://localhost:3000/auth/login \
+  -H 'content-type: application/json' \
+  -d '{"email":"admin@statsforge.local","password":"cambiar-esto-al-primer-login"}'
+```
+
+Debes ver:
+
+- `accessToken`
+- `refreshToken`
+- `mustChangePassword: true`
+- `user.role: "ADMIN"`
+
+Si usas ese `accessToken` en `GET /users`, debe responder `403 Password change required` hasta ejecutar `POST /auth/change-password`.
