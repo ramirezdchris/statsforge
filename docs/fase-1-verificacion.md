@@ -107,3 +107,66 @@ Debes ver:
 - `user.role: "ADMIN"`
 
 Si usas ese `accessToken` en `GET /users`, debe responder `403 Password change required` hasta ejecutar `POST /auth/change-password`.
+
+## Bloque 3: frontend Auth
+
+### Que se hizo
+
+- Se reemplazo el placeholder inicial de Angular.
+- Se agregaron modelos de auth en `core/models`.
+- Se agrego `AuthService` con Angular signals:
+  - `session`
+  - `user`
+  - `isAuthenticated`
+  - `mustChangePassword`
+- Se agrego persistencia de sesion en `localStorage`.
+- Se agrego interceptor HTTP para enviar `Authorization: Bearer ...`.
+- Se agregaron guards funcionales:
+  - `authGuard`
+  - `guestGuard`
+  - `passwordChangeGuard`
+- Se agregaron pantallas:
+  - `/login`
+  - `/change-password`
+  - `/app`
+
+### Comandos para verificar
+
+Desde la raiz:
+
+```bash
+pnpm web:build
+pnpm web:test
+```
+
+Para probar contra backend real:
+
+```bash
+pnpm api:dev
+```
+
+En otra terminal:
+
+```bash
+pnpm --filter web exec ng serve --host 127.0.0.1 --port 4200
+```
+
+Abre:
+
+```text
+http://127.0.0.1:4200/login
+```
+
+Con las credenciales seed:
+
+```text
+Email: admin@statsforge.local
+Password: cambiar-esto-al-primer-login
+```
+
+Resultado esperado:
+
+- Login exitoso.
+- Redireccion a `/change-password`.
+- Despues de cambiar password, redireccion a `/app`.
+- En `/app` se muestra nombre, email, rol y boton de salir.
