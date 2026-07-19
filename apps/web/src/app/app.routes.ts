@@ -39,6 +39,11 @@ export const routes: Routes = [
           import('./features/requests/requests.component').then((m) => m.RequestsComponent),
       },
       {
+        path: 'users',
+        loadComponent: () =>
+          import('./features/users/users.component').then((m) => m.UsersComponent),
+      },
+      {
         path: '',
         pathMatch: 'full',
         redirectTo: 'basket',

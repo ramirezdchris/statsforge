@@ -31,6 +31,15 @@ import { AuthService } from '../core/services/auth.service';
           </a>
           <a
             class="menu-item shrink-0"
+            routerLink="/explorer"
+            routerLinkActive="active"
+            [routerLinkActiveOptions]="{ exact: true }"
+          >
+            <i class="pi pi-search" aria-hidden="true"></i>
+            <span>Explorer</span>
+          </a>
+          <a
+            class="menu-item shrink-0"
             routerLink="/requests"
             routerLinkActive="active"
             [routerLinkActiveOptions]="{ exact: true }"
@@ -38,6 +47,17 @@ import { AuthService } from '../core/services/auth.service';
             <i class="pi pi-inbox" aria-hidden="true"></i>
             <span>{{ auth.hasRole('ADMIN', 'ANALYST') ? 'Bandeja' : 'Mis solicitudes' }}</span>
           </a>
+          @if (auth.hasRole('ADMIN')) {
+            <a
+              class="menu-item shrink-0"
+              routerLink="/users"
+              routerLinkActive="active"
+              [routerLinkActiveOptions]="{ exact: true }"
+            >
+              <i class="pi pi-users" aria-hidden="true"></i>
+              <span>Usuarios</span>
+            </a>
+          }
         </nav>
 
         <div class="sidebar-user min-w-0 md:mt-auto">
