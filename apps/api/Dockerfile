@@ -27,9 +27,8 @@ RUN apt-get update \
   && corepack prepare pnpm@9.15.9 --activate \
   && mkdir -p /data
 WORKDIR /app/apps/api
-COPY --from=deps /app/node_modules /app/node_modules
-COPY --from=deps /app/apps/api/node_modules ./node_modules
-COPY --from=build /app/node_modules/.prisma /app/node_modules/.prisma
+COPY --from=build /app/node_modules /app/node_modules
+COPY --from=build /app/apps/api/node_modules ./node_modules
 COPY --from=build /app/apps/api/dist ./dist
 COPY --from=build /app/apps/api/prisma ./prisma
 COPY --from=build /app/apps/api/prisma.config.ts ./prisma.config.ts
