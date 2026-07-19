@@ -1,6 +1,7 @@
 {
   "name": "statsforge",
   "version": "0.1.0",
+  "packageManager": "pnpm@9.15.9",
   "private": true,
   "description": "Sistema local de análisis estadístico deportivo con flujo de solicitudes",
   "scripts": {

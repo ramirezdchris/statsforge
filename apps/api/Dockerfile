@@ -1,7 +1,7 @@
 FROM node:22-bookworm-slim AS base
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
-RUN corepack enable
+RUN corepack enable && corepack prepare pnpm@9.15.9 --activate
 WORKDIR /app
 
 FROM base AS deps
@@ -23,7 +23,9 @@ ENV PATH="$PNPM_HOME:$PATH"
 RUN apt-get update \
   && apt-get install -y --no-install-recommends openssl \
   && rm -rf /var/lib/apt/lists/* \
-  && corepack enable
+  && corepack enable \
+  && corepack prepare pnpm@9.15.9 --activate \
+  && mkdir -p /data
 WORKDIR /app/apps/api
 COPY --from=deps /app/node_modules /app/node_modules
 COPY --from=deps /app/apps/api/node_modules ./node_modules
