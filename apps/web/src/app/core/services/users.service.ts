@@ -1,5 +1,6 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
+import { apiUrl } from '../config/runtime-config';
 import {
   AppUser,
   InviteUserRequest,
@@ -7,23 +8,21 @@ import {
   TemporaryPasswordResponse,
 } from '../models/user.models';
 
-const API_BASE_URL = 'http://localhost:3000';
-
 @Injectable({ providedIn: 'root' })
 export class UsersService {
   constructor(private readonly http: HttpClient) {}
 
   findAll() {
-    return this.http.get<AppUser[]>(`${API_BASE_URL}/users`);
+    return this.http.get<AppUser[]>(apiUrl('/users'));
   }
 
   invite(payload: InviteUserRequest) {
-    return this.http.post<InviteUserResponse>(`${API_BASE_URL}/users/invite`, payload);
+    return this.http.post<InviteUserResponse>(apiUrl('/users/invite'), payload);
   }
 
   resetPassword(userId: string) {
     return this.http.post<TemporaryPasswordResponse>(
-      `${API_BASE_URL}/users/${userId}/reset-password`,
+      apiUrl(`/users/${userId}/reset-password`),
       {},
     );
   }

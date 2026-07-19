@@ -1,6 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { computed, Injectable, signal } from '@angular/core';
 import { Router } from '@angular/router';
+import { apiUrl } from '../config/runtime-config';
 import {
   AuthSession,
   ChangePasswordRequest,
@@ -9,7 +10,6 @@ import {
 } from '../models/auth.models';
 
 const SESSION_KEY = 'statsforge.session';
-const API_BASE_URL = 'http://localhost:3000';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
@@ -28,14 +28,11 @@ export class AuthService {
   ) {}
 
   login(payload: LoginRequest) {
-    return this.http.post<AuthSession>(`${API_BASE_URL}/auth/login`, payload);
+    return this.http.post<AuthSession>(apiUrl('/auth/login'), payload);
   }
 
   changePassword(payload: ChangePasswordRequest) {
-    return this.http.post<AuthSession>(
-      `${API_BASE_URL}/auth/change-password`,
-      payload,
-    );
+    return this.http.post<AuthSession>(apiUrl('/auth/change-password'), payload);
   }
 
   logout() {
@@ -43,7 +40,7 @@ export class AuthService {
 
     if (refreshToken) {
       this.http
-        .post(`${API_BASE_URL}/auth/logout`, { refreshToken })
+        .post(apiUrl('/auth/logout'), { refreshToken })
         .subscribe({ error: () => undefined });
     }
 
