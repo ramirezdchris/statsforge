@@ -23,6 +23,8 @@ JWT_REFRESH_TTL="7d"
 ADMIN_EMAIL="tu-correo@dominio.com"
 ADMIN_PASSWORD="password-temporal-fuerte"
 ADMIN_NAME="Admin"
+# Opcional: usar "true" temporalmente para resetear el password del admin existente.
+ADMIN_RESET_PASSWORD_ON_SEED="false"
 API_FOOTBALL_KEY="tu-api-key"
 API_FOOTBALL_HOST="v3.football.api-sports.io"
 API_FOOTBALL_BASE_URL="https://v3.football.api-sports.io"
@@ -75,3 +77,4 @@ CORS_ORIGIN="https://tu-web.vercel.app"
 - No subas `apps/api/.env`.
 - No commitees `docs/Fase 1` sin limpiarlo porque contiene credenciales.
 - Si el frontend carga pero el login falla, casi siempre es `WEB_API_BASE_URL` incorrecto o `CORS_ORIGIN` sin la URL exacta de Vercel.
+- Si olvidaste el password del admin en Railway, pon `ADMIN_PASSWORD` con un temporal nuevo y `ADMIN_RESET_PASSWORD_ON_SEED="true"`, redeploya el backend, entra con ese password y despues vuelve a dejar `ADMIN_RESET_PASSWORD_ON_SEED="false"`.

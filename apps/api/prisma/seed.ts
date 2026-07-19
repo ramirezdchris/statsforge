@@ -10,9 +10,13 @@ const prisma = new PrismaClient({
 });
 
 async function main() {
-  const email = process.env.ADMIN_EMAIL ?? 'admin@statsforge.local';
+  const email = (
+    process.env.ADMIN_EMAIL ?? 'admin@statsforge.local'
+  ).toLowerCase();
   const password = process.env.ADMIN_PASSWORD ?? 'cambiar-esto-al-primer-login';
   const name = process.env.ADMIN_NAME ?? 'Admin';
+  const shouldResetAdminPassword =
+    process.env.ADMIN_RESET_PASSWORD_ON_SEED === 'true';
 
   const passwordHash = await bcrypt.hash(password, 10);
 
@@ -22,6 +26,13 @@ async function main() {
       name,
       role: Role.ADMIN,
       isActive: true,
+      ...(shouldResetAdminPassword
+        ? {
+            passwordHash,
+            mustChangePassword: true,
+            passwordChangedAt: null,
+          }
+        : {}),
     },
     create: {
       email,
@@ -70,7 +81,8 @@ async function main() {
     {
       key: 'CORNERS',
       label: 'Corners',
-      description: 'Promedios de tiros de esquina por equipo y total proyectado.',
+      description:
+        'Promedios de tiros de esquina por equipo y total proyectado.',
       category: 'set-pieces',
       sortOrder: 30,
     },
@@ -147,7 +159,8 @@ async function main() {
     {
       key: 'SCORER',
       label: 'Goleadores',
-      description: 'Top goleadores y rendimiento en club actual cuando hay cobertura.',
+      description:
+        'Top goleadores y rendimiento en club actual cuando hay cobertura.',
       category: 'players',
       sortOrder: 110,
     },
