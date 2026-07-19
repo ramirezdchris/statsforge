@@ -1,13 +1,17 @@
 :root {
-  --background: #0a0e1a;
-  --panel: #131a2c;
-  --panel-hi: #202b4a;
-  --border: #2a3454;
-  --text: #e5ebf5;
-  --text-dim: #7a87a8;
-  --lime: #a3e635;
-  --rose: #f43f5e;
-  --sky: #38bdf8;
+  --background: #f5f7fb;
+  --surface: #ffffff;
+  --surface-alt: #eef3f8;
+  --panel: #101828;
+  --panel-hi: #1d2939;
+  --border: #d9e1ec;
+  --text: #172033;
+  --text-dim: #667085;
+  --lime: #84cc16;
+  --rose: #e11d48;
+  --sky: #0284c7;
+  --green: #059669;
+  --amber: #b45309;
 }
 
 * {
@@ -39,6 +43,7 @@ input {
 }
 
 .auth-shell {
+  background: #0a0e1a;
   display: grid;
   min-height: 100dvh;
   place-items: center;
@@ -47,9 +52,10 @@ input {
 
 .auth-panel {
   width: min(100%, 420px);
-  border: 1px solid var(--border);
+  border: 1px solid #2a3454;
   border-radius: 8px;
-  background: var(--panel);
+  background: #131a2c;
+  color: #e5ebf5;
   padding: 28px;
 }
 
@@ -85,7 +91,7 @@ h2 {
 
 .lead {
   margin-bottom: 24px;
-  color: var(--text-dim);
+  color: #9aa6bd;
   line-height: 1.6;
 }
 
@@ -97,17 +103,17 @@ h2 {
 label {
   display: grid;
   gap: 8px;
-  color: var(--text-dim);
+  color: #9aa6bd;
   font-size: 0.92rem;
   font-weight: 600;
 }
 
 input {
   width: 100%;
-  border: 1px solid var(--border);
+  border: 1px solid #2a3454;
   border-radius: 6px;
   background: #0f1526;
-  color: var(--text);
+  color: #e5ebf5;
   outline: 0;
   padding: 12px 14px;
 }
@@ -133,9 +139,9 @@ button:disabled {
 }
 
 .secondary-button {
-  border: 1px solid var(--border);
+  border: 1px solid #2a3454;
   background: transparent;
-  color: var(--text);
+  color: #e5ebf5;
 }
 
 .form-error {
@@ -150,69 +156,247 @@ button:disabled {
 .app-shell {
   display: grid;
   min-height: 100dvh;
-  grid-template-columns: 280px 1fr;
+  grid-template-columns: 292px minmax(0, 1fr);
 }
 
-.sidebar {
+.layout-sidebar {
   display: flex;
   min-height: 100dvh;
   flex-direction: column;
-  justify-content: space-between;
-  border-right: 1px solid var(--border);
+  border-right: 1px solid #263348;
   background: var(--panel);
-  padding: 24px;
+  color: #f8fafc;
+  gap: 28px;
+  padding: 22px;
 }
 
-nav {
+.brand-lockup {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+}
+
+.brand-lockup strong,
+.brand-lockup span {
+  display: block;
+}
+
+.brand-lockup span {
+  color: #98a2b3;
+  font-size: 0.82rem;
+}
+
+.brand-mark,
+.user-chip > span {
+  align-items: center;
+  aspect-ratio: 1;
+  border-radius: 8px;
+  display: inline-flex;
+  flex: 0 0 auto;
+  font-weight: 800;
+  justify-content: center;
+}
+
+.brand-mark {
+  background: #d9f99d;
+  color: #1a2e05;
+  width: 42px;
+}
+
+.layout-menu {
   display: grid;
   gap: 8px;
-  margin: 28px 0;
+  margin: 0;
 }
 
-.nav-item {
+.menu-item {
+  align-items: center;
   border-radius: 6px;
-  color: var(--text);
+  color: #cbd5e1;
+  display: flex;
+  gap: 10px;
+  min-height: 42px;
   padding: 10px 12px;
   text-decoration: none;
 }
 
-.nav-item.active {
+.menu-item.active {
   background: var(--panel-hi);
+  color: #ffffff;
 }
 
-.nav-item.muted {
+.layout-sidebar .p-button {
+  margin-top: auto;
+  width: 100%;
+}
+
+.layout-main {
+  min-width: 0;
+  padding: 28px;
+}
+
+.topbar,
+.panel-heading {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.topbar {
+  margin-bottom: 24px;
+}
+
+.topbar h1,
+.work-panel h2 {
+  font-size: 1.7rem;
+  margin: 0;
+}
+
+.user-chip {
+  align-items: center;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  display: flex;
+  gap: 12px;
+  min-width: 220px;
+  padding: 10px 12px;
+}
+
+.user-chip > span {
+  background: var(--surface-alt);
+  color: var(--sky);
+  width: 40px;
+}
+
+.user-chip strong,
+.user-chip small {
+  display: block;
+}
+
+.user-chip small {
   color: var(--text-dim);
 }
 
-.workspace {
-  padding: 40px;
-}
-
-.session-grid {
+.metric-grid,
+.content-grid {
   display: grid;
-  max-width: 720px;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
-  margin: 28px 0 0;
+  gap: 16px;
 }
 
-.session-grid div {
+.metric-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-bottom: 16px;
+}
+
+.metric-card,
+.work-panel {
   border: 1px solid var(--border);
   border-radius: 8px;
-  background: var(--panel);
+  background: var(--surface);
+}
+
+.metric-card {
+  align-items: center;
+  display: flex;
+  gap: 14px;
+  min-width: 0;
   padding: 18px;
 }
 
-dt {
-  color: var(--text-dim);
-  font-size: 0.82rem;
-  font-weight: 700;
-  text-transform: uppercase;
+.metric-card p,
+.metric-card strong {
+  margin: 0;
 }
 
-dd {
-  margin: 8px 0 0;
+.metric-card p {
+  color: var(--text-dim);
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
+.metric-card strong {
+  display: block;
+  margin-top: 6px;
   overflow-wrap: anywhere;
+}
+
+.metric-icon {
+  align-items: center;
+  aspect-ratio: 1;
+  border-radius: 8px;
+  display: inline-flex;
+  justify-content: center;
+  width: 42px;
+}
+
+.metric-icon.success {
+  background: #dcfce7;
+  color: var(--green);
+}
+
+.metric-icon.info {
+  background: #e0f2fe;
+  color: var(--sky);
+}
+
+.metric-icon.warning {
+  background: #fef3c7;
+  color: var(--amber);
+}
+
+.content-grid {
+  grid-template-columns: minmax(0, 1fr) 320px;
+}
+
+.work-panel {
+  padding: 20px;
+}
+
+.work-panel.compact {
+  align-self: start;
+}
+
+.empty-state {
+  align-items: center;
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  color: var(--text-dim);
+  display: grid;
+  justify-items: center;
+  margin-top: 18px;
+  min-height: 220px;
+  padding: 24px;
+  text-align: center;
+}
+
+.empty-state .pi {
+  color: var(--sky);
+  font-size: 2rem;
+}
+
+.empty-state p {
+  margin: 12px 0 0;
+}
+
+.status-list {
+  display: grid;
+  gap: 12px;
+  list-style: none;
+  margin: 18px 0 0;
+  padding: 0;
+}
+
+.status-list li {
+  align-items: center;
+  color: var(--text-dim);
+  display: flex;
+  gap: 10px;
+}
+
+.status-list .pi-check {
+  color: var(--green);
 }
 
 @media (max-width: 760px) {
@@ -220,17 +404,29 @@ dd {
     grid-template-columns: 1fr;
   }
 
-  .sidebar {
+  .layout-sidebar {
     min-height: auto;
     border-right: 0;
     border-bottom: 1px solid var(--border);
   }
 
-  .workspace {
-    padding: 24px;
+  .layout-main {
+    padding: 20px;
   }
 
-  .session-grid {
+  .topbar,
+  .panel-heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .user-chip,
+  .layout-sidebar .p-button {
+    width: 100%;
+  }
+
+  .metric-grid,
+  .content-grid {
     grid-template-columns: 1fr;
   }
 }
