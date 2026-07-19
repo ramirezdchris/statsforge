@@ -48,6 +48,115 @@ async function main() {
     },
   });
 
+  const markets = [
+    {
+      key: 'OVER_UNDER_25',
+      label: 'Over/Under 2.5',
+      description: 'Frecuencia de partidos con mas de 2.5 goles.',
+      category: 'goals',
+      sortOrder: 10,
+    },
+    {
+      key: 'BTTS',
+      label: 'Ambos marcan',
+      description: 'Porcentaje de partidos donde ambos equipos anotan.',
+      category: 'goals',
+      sortOrder: 20,
+    },
+    {
+      key: 'CORNERS',
+      label: 'Corners',
+      description: 'Promedios de tiros de esquina por equipo y total proyectado.',
+      category: 'set-pieces',
+      sortOrder: 30,
+    },
+    {
+      key: 'TOTAL_SHOTS',
+      label: 'Remates totales',
+      description: 'Promedios de remates totales y ultimo valor contra el 80%.',
+      category: 'shots',
+      sortOrder: 35,
+    },
+    {
+      key: 'SHOTS_ON_TARGET',
+      label: 'Tiros a puerta',
+      description: 'Promedios de tiros a puerta y ultimo valor contra el 80%.',
+      category: 'shots',
+      sortOrder: 40,
+    },
+    {
+      key: 'CARDS',
+      label: 'Tarjetas',
+      description: 'Promedio reciente de tarjetas amarillas y rojas.',
+      category: 'discipline',
+      sortOrder: 50,
+    },
+    {
+      key: 'YELLOW_CARDS',
+      label: 'Tarjetas amarillas',
+      description: 'Promedio y ultimo valor de amarillas contra el 80%.',
+      category: 'discipline',
+      sortOrder: 51,
+    },
+    {
+      key: 'RED_CARDS',
+      label: 'Tarjetas rojas',
+      description: 'Promedio reciente de tarjetas rojas.',
+      category: 'discipline',
+      sortOrder: 52,
+    },
+    {
+      key: 'FIRST_HALF_GOALS',
+      label: 'Goles 1T',
+      description: 'Tendencia de goles durante el primer tiempo.',
+      category: 'halves',
+      sortOrder: 60,
+    },
+    {
+      key: 'SECOND_HALF_GOALS',
+      label: 'Goles 2T',
+      description: 'Tendencia de goles durante el segundo tiempo.',
+      category: 'halves',
+      sortOrder: 70,
+    },
+    {
+      key: 'MATCH_RESULT_1X2',
+      label: 'Resultado 1X2',
+      description: 'Forma reciente, puntos por partido y senal de resultado.',
+      category: 'result',
+      sortOrder: 80,
+    },
+    {
+      key: 'TEAM_FORM',
+      label: 'Forma del equipo',
+      description: 'Record V-E-D, puntos por partido y splits local/visitante.',
+      category: 'form',
+      sortOrder: 90,
+    },
+    {
+      key: 'H2H',
+      label: 'Enfrentamientos directos',
+      description: 'Historial directo con over, BTTS y resultados.',
+      category: 'history',
+      sortOrder: 100,
+    },
+    {
+      key: 'SCORER',
+      label: 'Goleadores',
+      description: 'Top goleadores y rendimiento en club actual cuando hay cobertura.',
+      category: 'players',
+      sortOrder: 110,
+    },
+  ];
+
+  for (const market of markets) {
+    await prisma.market.upsert({
+      where: { key: market.key },
+      update: market,
+      create: market,
+    });
+  }
+
   await prisma.auditLog.create({
     data: {
       userId: admin.id,

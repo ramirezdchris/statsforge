@@ -2,8 +2,8 @@
 
 > Sistema local de análisis estadístico deportivo para apuestas, con flujo de solicitudes multi-usuario y aprobación por rol.
 >
-> **Estado:** planificación completa, listo para arrancar Fase 1.
-> **Última actualización del documento:** 15 jul 2026.
+> **Estado:** Fase 1 implementada; Fase 2 inicial en desarrollo con Explorer, canasta, solicitudes y proxy/cache API-Football.
+> **Última actualización del documento:** 18 jul 2026.
 
 ---
 
@@ -677,6 +677,8 @@ Los mockups reflejan la dirección visual final que Angular + PrimeNG + Tailwind
 
 ### Fase 2 — Solicitudes y aprobación (semana 3)
 
+**Estado actual:** implementacion inicial avanzada. Ya existen modulos `football`, `markets` y `requests`, modelos Prisma para ligas/equipos/mercados/cache/solicitudes, vistas `/explorer`, `/basket` y `/requests`, y generacion inicial de JSON al aprobar. Falta verificacion end-to-end con `API_FOOTBALL_KEY` real y pulir estados/errores.
+
 **Backend:**
 - Módulos: `leagues`, `teams`, `matches`, `markets`, `requests`
 - Modelo: `AnalysisRequest`
@@ -685,8 +687,8 @@ Los mockups reflejan la dirección visual final que Angular + PrimeNG + Tailwind
   - `GET /requests` (lista según rol)
   - `POST /requests/:id/approve` (ADMIN/ANALYST)
   - `POST /requests/:id/reject`
-- Proxy a API-Football con caché en memoria simple
-- Cálculo de estadísticas por mercado
+- Proxy a API-Football con caché SQLite via `ApiCache`
+- Cálculo inicial de estadísticas por mercado
 
 **Frontend:**
 - Vista Explorer (multi-select ligas + lista partidos + añadir a canasta)
@@ -901,9 +903,10 @@ statsforge/
 - ⏳ **Nombre real del proyecto** — actualmente "StatsForge" como placeholder. Ideas descartables: MatchLab, ScoutForge, Oráculo, Ficha, Kickstats, GolIQ, Táctico.
 - ⏳ **Lista completa de mercados** — el usuario los definirá gradualmente. Los conocidos por ahora: goles totales, over/under 2.5, ambos marcan (BTTS), córners, tiros a puerta, posesión, tarjetas amarillas, tarjetas rojas, goles por tiempo, marcador 1T, marcador 2T.
 - ⏳ **Ligas custom** — se pueden agregar dinámicamente; La Liga / Premier / Serie A son la base.
-- ⏳ **Salida de comandos de verificación de entorno** — pendiente de ejecutar para saber qué falta instalar en la máquina Ubuntu.
-- ⏳ **Mockups de "Invitar usuario" y "Cambiar contraseña forzosa"** — se harán al llegar al día 4-5 de Fase 1.
-- ⏳ **API key de API-Football** — el usuario debe conseguirla antes de arrancar Fase 2.
+- ⏳ **API key de API-Football** — necesaria para verificar Explorer/Canasta/Solicitudes contra datos reales.
+- ⏳ **Estados de aprobación** — decidir si `APPROVED` se usa como estado intermedio con cola o si `approve` puede completar sin cola durante la fase local.
+- ⏳ **Entrega Telegram/Excel** — la UI permite pedir esos canales/opciones, pero la entrega Telegram y generacion Excel quedan para fases posteriores.
+- ⏳ **Nota local `docs/Fase 1`** — limpiar o eliminar porque contiene notas de terminal y contraseñas; no commitear sin sanear.
 
 ---
 

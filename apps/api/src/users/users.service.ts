@@ -1,4 +1,9 @@
-import { BadRequestException, ConflictException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { randomInt } from 'node:crypto';
 import { Role } from '@prisma/client';
@@ -74,6 +79,50 @@ export class UsersService {
     });
 
     return { user, temporaryPassword };
+  }
+
+  async resetPassword(adminUserId: string, userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, email: true, name: true, role: true, isActive: true },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    const temporaryPassword = this.generateTemporaryPassword();
+    const passwordHash = await bcrypt.hash(temporaryPassword, 10);
+
+    const updatedUser = await this.prisma.user.update({
+      where: { id: user.id },
+      data: {
+        passwordHash,
+        mustChangePassword: true,
+        passwordChangedAt: null,
+      },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        isActive: true,
+        mustChangePassword: true,
+        invitedAt: true,
+        createdAt: true,
+      },
+    });
+
+    await this.prisma.session.deleteMany({ where: { userId: user.id } });
+    await this.prisma.auditLog.create({
+      data: {
+        userId: adminUserId,
+        action: 'RESET_USER_PASSWORD',
+        metadata: JSON.stringify({ targetUserId: user.id, email: user.email }),
+      },
+    });
+
+    return { user: updatedUser, temporaryPassword };
   }
 
   private generateTemporaryPassword(): string {

@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
 import { Role } from '@prisma/client';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { Roles } from '../common/decorators/roles.decorator';
@@ -23,5 +23,11 @@ export class UsersController {
   @Post('invite')
   invite(@CurrentUser() user: AuthenticatedUser, @Body() dto: InviteUserDto) {
     return this.usersService.invite(user.sub, dto);
+  }
+
+  @Roles(Role.ADMIN)
+  @Post(':id/reset-password')
+  resetPassword(@CurrentUser() user: AuthenticatedUser, @Param('id') userId: string) {
+    return this.usersService.resetPassword(user.sub, userId);
   }
 }

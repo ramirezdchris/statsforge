@@ -17,6 +17,20 @@ enum Role {
   VIEWER
 }
 
+enum RequestStatus {
+  PENDING
+  APPROVED
+  COMPLETED
+  REJECTED
+  FAILED
+}
+
+enum DeliveryChannel {
+  APP
+  TELEGRAM
+  BOTH
+}
+
 model User {
   id                 String    @id @default(cuid())
   email              String    @unique
@@ -37,6 +51,8 @@ model User {
   invitedBy   User?      @relation("Invitations", fields: [invitedById], references: [id])
   invitations User[]     @relation("Invitations")
   sessions    Session[]
+  requests    AnalysisRequest[] @relation("Requester")
+  reviews     AnalysisRequest[] @relation("Reviewer")
   auditLogs   AuditLog[]
 }
 
@@ -60,6 +76,88 @@ model SystemConfig {
   value     String
   category  String   @default("general")
   updatedAt DateTime @updatedAt
+}
+
+model League {
+  id        Int      @id
+  name      String
+  country   String
+  type      String?
+  logoUrl   String?
+  flagUrl   String?
+  isEnabled Boolean  @default(true)
+  fetchedAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  teams Team[]
+}
+
+model Team {
+  id        Int      @id
+  leagueId  Int?
+  name      String
+  code      String?
+  country   String?
+  logoUrl   String?
+  fetchedAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  league League? @relation(fields: [leagueId], references: [id])
+
+  @@index([leagueId])
+}
+
+model Market {
+  key         String   @id
+  label       String
+  description String?
+  category    String
+  isEnabled   Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model ApiCache {
+  key          String    @id
+  provider    String    @default("api-football")
+  endpoint     String
+  queryJson    String
+  responseJson String
+  expiresAt    DateTime?
+  fetchedAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([endpoint])
+  @@index([expiresAt])
+}
+
+model AnalysisRequest {
+  id              String          @id @default(cuid())
+  requesterId     String
+  reviewerId      String?
+  status          RequestStatus   @default(PENDING)
+  basketJson      String
+  defaultMarkets  String
+  historyDepth    Int             @default(10)
+  includeExcel    Boolean         @default(false)
+  deliveryChannel DeliveryChannel @default(APP)
+  message         String?
+  rejectionReason String?
+  estimatedCalls  Int?
+  actualCalls     Int?
+  resultJson      String?
+  createdAt       DateTime        @default(now())
+  reviewedAt      DateTime?
+  completedAt     DateTime?
+  updatedAt       DateTime        @updatedAt
+
+  requester User  @relation("Requester", fields: [requesterId], references: [id])
+  reviewer  User? @relation("Reviewer", fields: [reviewerId], references: [id])
+
+  @@index([requesterId])
+  @@index([reviewerId])
+  @@index([status])
 }
 
 model AuditLog {

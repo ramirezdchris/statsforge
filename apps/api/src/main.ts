@@ -2,10 +2,23 @@ import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
 
+function corsOrigins(): string[] {
+  const configuredOrigins = process.env.CORS_ORIGIN;
+
+  if (!configuredOrigins) {
+    return ['http://localhost:4200', 'http://127.0.0.1:4200'];
+  }
+
+  return configuredOrigins
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+}
+
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   app.enableCors({
-    origin: process.env.CORS_ORIGIN ?? 'http://localhost:4200',
+    origin: corsOrigins(),
     credentials: true,
   });
   app.useGlobalPipes(

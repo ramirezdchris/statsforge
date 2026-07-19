@@ -1,0 +1,1121 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Terminal de Apuestas · Análisis de Partidos</title>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Space+Mono:wght@400;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+
+<style>
+:root{
+  --bg:#0B0E13; --panel:#141923; --panel2:#1B2230; --border:#28303D;
+  --text:#EAEEF4; --muted:#8794A6;
+  --amber:#F2A93B; --teal:#46B8A8;
+  --home:#5AA9FF; --away:#FF7A6B;
+  --green:#43C08A; --red:#E5564E;
+  --r:12px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-serif;line-height:1.5;padding-bottom:60px;-webkit-text-size-adjust:100%}
+.mono{font-family:'Space Mono',monospace}
+
+/* Cabecera */
+header{position:sticky;top:0;z-index:30;display:flex;align-items:center;justify-content:space-between;gap:12px;
+  padding:14px 16px;background:rgba(11,14,19,.92);backdrop-filter:blur(8px);border-bottom:1px solid var(--border);flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:12px}
+.brand .bar{width:10px;height:30px;background:linear-gradient(var(--amber),var(--teal));border-radius:3px}
+.brand h1{font-family:'Oswald',sans-serif;font-weight:700;letter-spacing:1.2px;font-size:18px;text-transform:uppercase}
+.brand small{display:block;color:var(--muted);font-size:10px;letter-spacing:2.5px;text-transform:uppercase}
+.quota{font-family:'Space Mono',monospace;font-size:11px;color:var(--muted);border:1px solid var(--border);border-radius:8px;padding:6px 10px;white-space:nowrap}
+.quota b{color:var(--amber)}
+
+.wrap{max-width:1120px;margin:0 auto;padding:0 16px}
+.card{background:var(--panel);border:1px solid var(--border);border-radius:var(--r);padding:18px;margin-top:16px}
+.card h2{font-family:'Oswald',sans-serif;font-weight:600;text-transform:uppercase;letter-spacing:1.3px;font-size:13px;color:var(--amber);margin-bottom:14px;display:flex;align-items:center;gap:9px}
+.card h2::before{content:"";width:6px;height:6px;background:var(--amber);border-radius:50%;flex:none}
+
+label{display:block;font-size:10px;text-transform:uppercase;letter-spacing:1.4px;color:var(--muted);margin-bottom:6px}
+input,select{width:100%;background:var(--panel2);color:var(--text);border:1px solid var(--border);border-radius:9px;padding:12px;font-size:15px;font-family:inherit}
+input:focus,select:focus{outline:none;border-color:var(--teal)}
+.grid{display:grid;gap:12px}
+.g2{grid-template-columns:1fr 1fr}.g3{grid-template-columns:repeat(3,1fr)}
+@media(max-width:680px){.g2,.g3{grid-template-columns:1fr}}
+
+button{font-family:'Oswald',sans-serif;font-weight:600;letter-spacing:1.2px;text-transform:uppercase;background:var(--amber);color:#1c1402;border:none;border-radius:9px;padding:13px 16px;font-size:14px;cursor:pointer;transition:filter .15s;width:100%}
+button:hover{filter:brightness(1.08)} button:disabled{opacity:.45;cursor:not-allowed}
+button.ghost{background:transparent;color:var(--muted);border:1px solid var(--border)}
+button.teal{background:var(--teal);color:#04201c}
+.btns{display:grid;gap:10px;grid-template-columns:2fr 1fr;margin-top:14px}
+@media(max-width:680px){.btns{grid-template-columns:1fr}}
+
+.hint{font-size:12px;color:var(--muted);margin-top:10px;line-height:1.6}
+.hint b{color:var(--amber)}
+
+/* Combobox de ligas */
+.combo{position:relative}
+.combo .list{position:absolute;z-index:20;left:0;right:0;top:calc(100% + 4px);background:var(--panel2);border:1px solid var(--border);border-radius:9px;max-height:260px;overflow:auto;display:none;box-shadow:0 16px 40px rgba(0,0,0,.5)}
+.combo .list.open{display:block}
+.combo .opt{padding:11px 12px;font-size:14px;cursor:pointer;border-bottom:1px solid var(--border)}
+.combo .opt:hover,.combo .opt.active{background:rgba(70,184,168,.14)}
+.combo .opt small{color:var(--muted);display:block;font-size:11px}
+.combo .opt:last-child{border-bottom:none}
+
+/* Progreso */
+.progress{margin-top:14px;display:none}
+.progress.on{display:block}
+.bar{height:8px;background:var(--panel2);border-radius:99px;overflow:hidden;border:1px solid var(--border)}
+.bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--teal),var(--amber));transition:width .4s}
+.progress .txt{font-family:'Space Mono',monospace;font-size:12px;color:var(--teal);margin-top:8px}
+#status{margin-top:12px;font-size:13px;font-family:'Space Mono',monospace}
+#status.err{color:var(--red)} #status.ok{color:var(--green)}
+
+/* Marcador */
+.matchup{display:flex;align-items:center;justify-content:center;gap:20px;padding:22px 0;flex-wrap:wrap}
+.side{text-align:center;min-width:110px}
+.side .nm{font-family:'Oswald',sans-serif;font-weight:700;font-size:19px;text-transform:uppercase}
+.side.h .nm{color:var(--home)} .side.a .nm{color:var(--away)}
+.side .tg{font-size:10px;color:var(--muted);letter-spacing:2px;text-transform:uppercase}
+.vs{font-family:'Space Mono',monospace;color:var(--amber);font-size:24px;font-weight:700}
+.cacheinfo{text-align:center;font-size:11px;color:var(--muted);font-family:'Space Mono',monospace;margin-top:-6px}
+
+/* KPIs */
+.kpis{display:grid;gap:10px}
+.k4{grid-template-columns:repeat(4,1fr)} .k3{grid-template-columns:repeat(3,1fr)}
+@media(max-width:680px){.k4{grid-template-columns:1fr 1fr}.k3{grid-template-columns:1fr 1fr}}
+.kpi{background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:13px;text-align:center}
+.kpi .v{font-family:'Space Mono',monospace;font-size:22px;font-weight:700}
+.kpi .l{font-size:9.5px;text-transform:uppercase;letter-spacing:1.2px;color:var(--muted);margin-top:3px;line-height:1.3}
+
+/* Comparativa A vs B */
+.cmp{display:flex;flex-direction:column;gap:11px}
+.cmp .row{display:grid;grid-template-columns:64px 1fr 64px;align-items:center;gap:10px}
+.cmp .row .lab{grid-column:1 / -1;text-align:center;font-size:10px;text-transform:uppercase;letter-spacing:1.4px;color:var(--muted);margin-bottom:-4px}
+.cmp .va,.cmp .vb{font-family:'Space Mono',monospace;font-weight:700;font-size:15px}
+.cmp .va{color:var(--home);text-align:right} .cmp .vb{color:var(--away);text-align:left}
+.cmp .meter{height:9px;border-radius:99px;background:var(--panel2);overflow:hidden;display:flex;border:1px solid var(--border)}
+.cmp .meter .mh{background:var(--home)} .cmp .meter .ma{background:var(--away)}
+
+/* Tablas */
+.scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+table{width:100%;border-collapse:collapse;font-size:13px;min-width:480px}
+th,td{padding:9px 8px;text-align:left;border-bottom:1px solid var(--border);white-space:nowrap}
+th{font-size:9.5px;text-transform:uppercase;letter-spacing:1.2px;color:var(--muted)}
+td.num{font-family:'Space Mono',monospace;text-align:right}
+tr:last-child td{border-bottom:none}
+.tag-h{color:var(--home)} .tag-a{color:var(--away)}
+
+/* Gráficos */
+.charts{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:680px){.charts{grid-template-columns:1fr}}
+.cbox{background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:14px}
+.cbox h3{font-size:10px;text-transform:uppercase;letter-spacing:1.3px;color:var(--muted);margin-bottom:10px}
+
+/* Parámetros de apuesta */
+.bets{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:680px){.bets{grid-template-columns:1fr}}
+.bet{background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:14px;display:flex;gap:12px;align-items:flex-start}
+.bet .verdict{font-family:'Oswald',sans-serif;font-weight:700;font-size:15px;letter-spacing:.5px;padding:5px 10px;border-radius:7px;white-space:nowrap;flex:none}
+.bet .verdict.go{background:rgba(67,192,138,.16);color:var(--green);border:1px solid rgba(67,192,138,.4)}
+.bet .verdict.no{background:rgba(229,86,78,.14);color:var(--red);border:1px solid rgba(229,86,78,.4)}
+.bet .verdict.mid{background:rgba(242,169,59,.14);color:var(--amber);border:1px solid rgba(242,169,59,.4)}
+.bet .body .t{font-weight:600;font-size:13px}
+.bet .body .d{font-size:12px;color:var(--muted);margin-top:3px;line-height:1.5}
+.bet .body .n{font-family:'Space Mono',monospace;color:var(--teal);font-size:12px}
+
+.disc{font-size:11px;color:var(--muted);margin-top:16px;border-top:1px solid var(--border);padding-top:13px;line-height:1.6}
+.hidden{display:none}
+.spin{display:inline-block;width:12px;height:12px;border:2px solid var(--border);border-top-color:var(--teal);border-radius:50%;animation:s .7s linear infinite;vertical-align:middle;margin-right:7px}
+@keyframes s{to{transform:rotate(360deg)}}
+.nodata{color:var(--muted);font-size:12px;padding:8px 0}
+#dayList{margin-top:10px;display:flex;flex-direction:column;gap:8px}
+.dayfx{background:var(--panel2);border:1px solid var(--border);border-radius:9px;padding:11px 13px;font-size:14px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:10px}
+.dayfx:hover{border-color:var(--teal)}
+.dayfx small{color:var(--muted);font-family:'Space Mono',monospace}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <div class="bar"></div>
+    <div><h1>Terminal de Apuestas</h1><small>Análisis · datos reales · 3 años</small></div>
+  </div>
+  <div class="quota" id="quota">Cuota: <b>—</b></div>
+</header>
+
+<div class="wrap">
+
+  <!-- Configuración -->
+  <div class="card">
+    <h2>Configuración</h2>
+    <div class="grid g2">
+      <div>
+        <label>¿Dónde sacaste tu clave?</label>
+        <select id="provider">
+          <option value="direct">Directa · dashboard.api-football.com</option>
+          <option value="rapidapi">RapidAPI · rapidapi.com</option>
+        </select>
+      </div>
+      <div>
+        <label>API Key</label>
+        <input id="apiKey" type="password" placeholder="Tu clave de API-Football" />
+      </div>
+    </div>
+    <div class="grid g2" style="margin-top:12px">
+      <div>
+        <label>Temporada de la competición</label>
+        <input id="season" type="number" value="2025" />
+      </div>
+      <div>
+        <label>Temporada actual de club (goleadores)</label>
+        <input id="clubSeason" type="number" value="2025" />
+      </div>
+    </div>
+    <div class="hint">
+      El histórico se analiza sobre <b>3 años</b> (temporada elegida y las 2 previas). La media de los goleadores en su
+      club se calcula con la <b>temporada actual</b>. Este panel usa endpoints del plan <b>Pro</b>; con el plan gratis
+      varias secciones aparecerán como "sin datos".
+    </div>
+  </div>
+
+  <!-- Selección -->
+  <div class="card">
+    <h2>Selecciona el partido</h2>
+    <div class="combo">
+      <label>Liga / competición — escribe para buscar</label>
+      <input id="leagueSearch" placeholder="Ej.: Premier, Mundial, Champions, Liga MX…" autocomplete="off" />
+      <div class="list" id="leagueList"></div>
+    </div>
+    <div class="btns" style="grid-template-columns:1fr 1fr">
+      <button id="loadLeagues" class="ghost">1 · Cargar catálogo de ligas</button>
+      <button id="loadTeams" class="ghost" disabled>2 · Cargar equipos</button>
+    </div>
+
+    <div class="grid g2" style="margin-top:14px">
+      <div><label>Ver partidos de una fecha</label><input id="fxDate" type="date" /></div>
+      <div style="display:flex;align-items:flex-end"><button id="loadDay" class="ghost">Cargar partidos de esa fecha</button></div>
+    </div>
+    <div id="dayList"></div>
+    <label style="display:flex;align-items:center;gap:8px;margin-top:14px;text-transform:none;letter-spacing:0;font-size:13px;color:var(--text);cursor:pointer">
+      <input type="checkbox" id="onlySenior" checked style="width:auto" />
+      Solo selección absoluta masculina (excluir Sub-XX, femenino y olímpicas)
+    </label>
+    <div class="grid g2" style="margin-top:10px">
+      <div><label class="tag-h" style="color:var(--home)">Local</label>
+        <select id="teamA" disabled><option value="">—</option></select></div>
+      <div><label class="tag-a" style="color:var(--away)">Visitante</label>
+        <select id="teamB" disabled><option value="">—</option></select></div>
+    </div>
+    <div class="btns">
+      <button id="analyze" disabled>Analizar partido</button>
+      <button id="refresh" class="teal" disabled>Actualizar</button>
+    </div>
+    <div class="progress" id="progress"><div class="bar"><i id="barFill"></i></div><div class="txt" id="progTxt"></div></div>
+    <div id="status"></div>
+    <button id="diagTeam" class="ghost" style="margin-top:12px">Diagnóstico de equipo (¿por qué no trae partidos?)</button>
+    <div id="diagTeamOut" class="hint" style="font-family:'Space Mono',monospace;font-size:11.5px"></div>
+    <label style="display:flex;align-items:center;gap:8px;margin-top:12px;text-transform:none;letter-spacing:0;font-size:13px;color:var(--text);cursor:pointer">
+      <input type="checkbox" id="freshData" style="width:auto" />
+      Forzar datos frescos (ignorar caché) — úsalo para actualizar partidos recién jugados; gasta más cuota
+    </label>
+    <button id="clearCache" class="ghost" style="margin-top:12px">Limpiar toda la caché</button>
+  </div>
+
+  <div class="card">
+    <h2>Exportar Excel · histórico partido a partido (3 años)</h2>
+    <div class="hint" style="margin-top:0">Genera un <b>.xlsx</b> con cada partido jugado de los dos equipos (marcador, tiros de esquina, remates al arco y remates totales) más una hoja de <b>resumen</b> con promedios, el umbral 80% y el % de veces que lo superan. Elige los equipos arriba (o un partido de la fecha) y descarga.</div>
+    <div class="grid g2" style="margin-top:6px">
+      <div><label>Máx. partidos por equipo (más = más peticiones)</label><input id="xlsMax" type="number" value="25" /></div>
+      <div style="display:flex;align-items:flex-end"><button id="dlExcel" class="teal">Descargar Excel</button></div>
+    </div>
+    <div class="progress" id="xlsProg"><div class="bar"><i id="xlsFill"></i></div><div class="txt" id="xlsTxt"></div></div>
+    <div id="excelMsg" class="hint"></div>
+  </div>
+
+  <div class="card">
+    <h2>Excel de liga completa · escaneo con verde/rojo</h2>
+    <div class="hint" style="margin-top:0">Todos los equipos de la liga seleccionada arriba (temporada elegida), con promedio de córners, remates al arco y remates, su 80% y el <b>último valor</b> coloreado en <b style="color:var(--green)">verde</b> si supera el 80% o <b style="color:var(--red)">rojo</b> si no. Ideal para escanear oportunidades de un vistazo.</div>
+    <div class="grid g2" style="margin-top:6px">
+      <div><label>Máx. partidos por equipo</label><input id="lgMax" type="number" value="12" /></div>
+      <div style="display:flex;align-items:flex-end"><button id="dlLeague" class="teal">Descargar Excel de liga</button></div>
+    </div>
+    <div class="progress" id="lgProg"><div class="bar"><i id="lgFill"></i></div><div class="txt" id="lgTxt"></div></div>
+    <div id="leagueMsg" class="hint"></div>
+  </div>
+
+  <!-- Resultados -->
+  <div id="results" class="hidden">
+
+    <div class="card">
+      <div class="matchup">
+        <div class="side h"><div class="tg">Local</div><div class="nm" id="nameA">—</div></div>
+        <div class="vs">VS</div>
+        <div class="side a"><div class="tg">Visitante</div><div class="nm" id="nameB">—</div></div>
+      </div>
+      <div class="cacheinfo" id="cacheInfo"></div>
+    </div>
+
+    <div class="card">
+      <h2>Exportar para otra IA</h2>
+      <div class="hint" style="margin-top:0">Genera el <b>JSON</b> con todos los datos del partido y un <b>prompt</b> de analista de apuestas listo para pegar en otra IA (ChatGPT, Gemini, etc.).</div>
+      <div class="btns" style="grid-template-columns:1fr 1fr">
+        <button id="copyExport" class="teal">Copiar prompt + datos</button>
+        <button id="dlExport" class="ghost">Descargar .json</button>
+      </div>
+      <div id="exportMsg" class="hint"></div>
+    </div>
+
+    <div class="card">
+
+    <div class="card">
+      <h2>Parámetros de apuesta</h2>
+      <div class="bets" id="bets"></div>
+      <div class="disc">Cifras de frecuencia histórica (3 años) y forma actual, <b>no garantías</b>. El pasado no predice el resultado;
+        úsalo como una entrada más. Verifica las cuotas reales en Bet365. Apuesta con responsabilidad.</div>
+    </div>
+
+    <div class="card">
+      <h2>Resumen · enfrentamiento directo (3 años)</h2>
+      <div class="kpis k4" id="h2hKpis"></div>
+    </div>
+
+    <div class="card">
+      <h2>Comparativa de equipos · medias por partido</h2>
+      <div class="cmp" id="cmp"></div>
+    </div>
+
+    <div class="card">
+      <h2>Gráficos</h2>
+      <div class="charts">
+        <div class="cbox"><h3>Goles · a favor / en contra</h3><canvas id="chGoals"></canvas></div>
+        <div class="cbox"><h3>Córners y tiros · media por partido</h3><canvas id="chSet"></canvas></div>
+        <div class="cbox"><h3>Historial directo</h3><canvas id="chH2H"></canvas></div>
+        <div class="cbox"><h3>Trayectoria · puntos acumulados</h3><canvas id="chForm"></canvas></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2 id="scTitleA">Top 10 goleadores · Local</h2>
+      <div class="scroll"><table id="scA"><tbody></tbody></table></div>
+    </div>
+    <div class="card">
+      <h2 id="scTitleB">Top 10 goleadores · Visitante</h2>
+      <div class="scroll"><table id="scB"><tbody></tbody></table></div>
+    </div>
+
+    <div class="card">
+      <h2>Enfrentamientos directos · detalle</h2>
+      <div class="scroll"><table id="h2hTable"><tbody></tbody></table></div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* =====================================================================
+   TERMINAL DE APUESTAS — API-Football (v3). Todo el cálculo es local.
+   Sin IA inventando números: cada cifra sale de la respuesta real de la API.
+   ===================================================================== */
+const $ = id => document.getElementById(id);
+let FORCE = false;        // saltar caché en esta corrida (botón Actualizar)
+let LEAGUES = [];         // catálogo de ligas cargado
+
+/* ---------- Proveedor (dos puertas) ---------- */
+function getApi(){
+  const key = $('apiKey').value.trim();
+  if($('provider').value === 'rapidapi')
+    return { base:'https://api-football-v1.p.rapidapi.com/v3',
+             headers:{'x-rapidapi-key':key,'x-rapidapi-host':'api-football-v1.p.rapidapi.com'} };
+  return { base:'https://v3.football.api-sports.io', headers:{'x-apisports-key':key} };
+}
+
+/* ---------- Caché en localStorage ---------- */
+const Cache = {
+  k:x=>'bt:'+x,
+  get(x){ try{const r=localStorage.getItem(this.k(x));return r?JSON.parse(r):null;}catch{return null;} },
+  set(x,v){ try{localStorage.setItem(this.k(x),JSON.stringify(v));}catch{} },
+  clear(){ Object.keys(localStorage).filter(z=>z.startsWith('bt:')).forEach(z=>localStorage.removeItem(z)); }
+};
+
+/* ---------- Petición cruda con caché por ruta + cuota ---------- */
+async function api(path){
+  const {base,headers}=getApi();
+  const key=headers['x-apisports-key']||headers['x-rapidapi-key'];
+  if(!key) throw new Error('Falta la API Key.');
+  const ck='req:'+path;
+  const fresh = document.getElementById('freshData') && document.getElementById('freshData').checked;
+  if(!FORCE && !fresh){ const c=Cache.get(ck); if(c) return c; }   // los datos pasados no cambian
+  const res=await fetch(base+path,{headers});
+  const rem=res.headers.get('x-ratelimit-requests-remaining');
+  const lim=res.headers.get('x-ratelimit-requests-limit');
+  if(rem!==null) $('quota').innerHTML='Cuota: <b>'+rem+'</b>/'+(lim||'—');
+  if(!res.ok) throw new Error('HTTP '+res.status+' (revisa clave o cuota).');
+  const data=await res.json();
+  const e=data.errors;
+  if(e && (Array.isArray(e)?e.length:Object.keys(e).length)) throw new Error(JSON.stringify(e));
+  Cache.set(ck,data);
+  return data;
+}
+
+/* ---------- Buscador de ligas (combobox escribible) ---------- */
+function applyLeagues(d){
+  LEAGUES=(d.response||[]).map(x=>({id:x.league.id,name:x.league.name,country:x.country.name,type:x.league.type}))
+    .sort((a,b)=>(a.country+a.name).localeCompare(b.country+b.name));
+}
+$('loadLeagues').onclick=async()=>{
+  try{
+    setStatus('Cargando catálogo de ligas…','');
+    applyLeagues(await api('/leagues'));
+    setStatus('Catálogo listo ('+LEAGUES.length+' ligas). Escribe para buscar.','ok');
+    $('leagueSearch').focus();
+  }catch(e){ setStatus(err(e),'err'); }
+};
+let LEAGUE_ID=null;
+$('leagueSearch').addEventListener('input',e=>{
+  const q=e.target.value.toLowerCase().trim();
+  LEAGUE_ID=null; $('loadTeams').disabled=true;
+  const box=$('leagueList');
+  if(!q || !LEAGUES.length){ box.classList.remove('open'); return; }
+  const hits=LEAGUES.filter(l=>(l.name+' '+l.country).toLowerCase().includes(q)).slice(0,40);
+  box.innerHTML=hits.map(l=>`<div class="opt" data-id="${l.id}" data-name="${esc(l.name)}">${esc(l.name)}<small>${esc(l.country)} · ${esc(l.type||'')}</small></div>`).join('')
+    || '<div class="opt" style="cursor:default;color:var(--muted)">Sin coincidencias</div>';
+  box.classList.add('open');
+});
+$('leagueList').addEventListener('click',e=>{
+  const o=e.target.closest('.opt'); if(!o||!o.dataset.id) return;
+  LEAGUE_ID=o.dataset.id;
+  $('leagueSearch').value=o.dataset.name;
+  $('leagueList').classList.remove('open');
+  $('loadTeams').disabled=false;
+});
+document.addEventListener('click',e=>{ if(!e.target.closest('.combo')) $('leagueList').classList.remove('open'); });
+
+/* ---------- Cargar equipos ---------- */
+$('loadTeams').onclick=async()=>{
+  if(!LEAGUE_ID){ setStatus('Elige una liga de la lista primero.','err'); return; }
+  const season=$('season').value.trim();
+  try{
+    setStatus('Cargando equipos…','');
+    const d=await api(`/teams?league=${LEAGUE_ID}&season=${season}`);
+    let teams=d.response||[];
+    if(!teams.length){ setStatus('Esa competición no tuvo edición en '+season+'. Revisa el año (ej.: el Mundial es 2022 o 2026, no años intermedios).','err'); return; }
+    if($('onlySenior').checked){ const before=teams.length; teams=teams.filter(t=>isSenior(t.team.name)); window._teamFilterNote=before-teams.length; }
+    ['teamA','teamB'].forEach(id=>{
+      const s=$(id); s.innerHTML='<option value="">— Elige —</option>';
+      teams.slice().sort((a,b)=>a.team.name.localeCompare(b.team.name)).forEach(t=>{
+        const o=document.createElement('option');
+        o.value=t.team.id; o.textContent=t.team.name; o.dataset.name=t.team.name;
+        s.appendChild(o);
+      });
+      s.disabled=false;
+    });
+    setStatus('Equipos cargados ('+teams.length+').'+(window._teamFilterNote?' Filtradas '+window._teamFilterNote+' variantes (Sub-XX/femenino/olímpicas).':''),'ok');
+    window._teamFilterNote=0;
+    ready();
+  }catch(e){ setStatus(err(e),'err'); }
+};
+$('teamA').onchange=$('teamB').onchange=ready;
+function ready(){ const a=$('teamA').value,b=$('teamB').value,ok=a&&b&&a!==b;
+  $('analyze').disabled=!ok; $('refresh').disabled=!ok; }
+
+$('clearCache').onclick=()=>{ Cache.clear(); setStatus('Caché borrada.','ok'); $('quota').innerHTML='Cuota: <b>—</b>'; };
+
+/* ---------- Diagnóstico de equipo: por qué no trae partidos ---------- */
+$('diagTeam').onclick=async()=>{
+  const sel=[['teamA','Local'],['teamB','Visitante']].map(([id,lab])=>{
+    const s=$(id); return s.value?{id:s.value,name:(s.selectedOptions[0].dataset.name||s.selectedOptions[0].textContent),lab}:null;
+  }).filter(Boolean);
+  const out=$('diagTeamOut');
+  if(!sel.length){ out.innerHTML='<b style="color:var(--red)">Elige al menos un equipo arriba.</b>'; return; }
+  const season=$('season').value.trim();
+  out.innerHTML='<span class="spin"></span>Consultando…';
+  const lines=[];
+  for(const t of sel){
+    lines.push(`<b style="color:var(--amber)">${esc(t.lab)}: ${esc(t.name)} — ID ${t.id}</b>`);
+    try{
+      const fx=(await api(`/fixtures?team=${t.id}&season=${season}`)).response||[];
+      lines.push(`• Así lo pide la app: /fixtures?team=${t.id}&season=${season} → <b>${fx.length}</b> partidos`);
+      const by={};
+      fx.forEach(f=>{ const k=(f.league?.id)+' · '+(f.league?.name); by[k]=(by[k]||0)+1; });
+      const comp=Object.entries(by).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`&nbsp;&nbsp;– ${esc(k)}: ${v}`).join('<br>');
+      lines.push('• Competiciones encontradas:<br>'+(comp||'&nbsp;&nbsp;(ninguna)'));
+    }catch(e){ lines.push('• team+season → '+esc(err(e))); }
+    try{
+      const w=(await api(`/fixtures?league=1&season=${season}&team=${t.id}`)).response||[];
+      lines.push(`• Solo World Cup: /fixtures?league=1&season=${season}&team=${t.id} → <b style="color:${w.length?'var(--green)':'var(--red)'}">${w.length}</b> partidos`);
+    }catch(e){ lines.push('• World Cup específico → '+esc(err(e))); }
+    lines.push('&nbsp;');
+  }
+  out.innerHTML=lines.join('<br>');
+};
+
+/* ---------- Partidos por fecha (mañana) ---------- */
+(function(){ const d=new Date(); d.setDate(d.getDate()+1); $('fxDate').value=d.toISOString().slice(0,10); })();
+$('loadDay').onclick=async()=>{
+  if(!LEAGUE_ID){ setStatus('Elige una liga de la lista primero.','err'); return; }
+  const season=$('season').value.trim(), date=$('fxDate').value;
+  try{
+    setStatus('Cargando partidos de '+date+'…','');
+    const d=await api(`/fixtures?league=${LEAGUE_ID}&season=${season}&date=${date}`);
+    const fx=d.response||[]; const box=$('dayList');
+    if(!fx.length){ box.innerHTML='<div class="nodata">No hay partidos de esa liga en esa fecha.</div>'; setStatus('Sin partidos ese día.','ok'); return; }
+    box.innerHTML=fx.map(f=>`<div class="dayfx" data-h="${f.teams.home.id}" data-hn="${esc(f.teams.home.name)}" data-a="${f.teams.away.id}" data-an="${esc(f.teams.away.name)}">
+      <span>${esc(f.teams.home.name)} <b style="color:var(--muted)">vs</b> ${esc(f.teams.away.name)}</span><small>${(f.fixture.date||'').slice(11,16)}</small></div>`).join('');
+    setStatus(fx.length+' partido(s). Toca uno para cargarlo.','ok');
+  }catch(e){ setStatus(err(e),'err'); }
+};
+$('dayList').addEventListener('click',e=>{
+  const o=e.target.closest('.dayfx'); if(!o) return;
+  setTeam('teamA',o.dataset.h,o.dataset.hn); setTeam('teamB',o.dataset.a,o.dataset.an); ready();
+  setStatus('Cargado: '+o.dataset.hn+' vs '+o.dataset.an+'. Pulsa Analizar o Descargar Excel.','ok');
+});
+function setTeam(id,val,name){
+  const s=$(id); let opt=[...s.options].find(o=>o.value==val);
+  if(!opt){ opt=document.createElement('option'); opt.value=val; opt.textContent=name; opt.dataset.name=name; s.appendChild(opt); }
+  s.disabled=false; s.value=val;
+}
+
+/* ---------- Helpers de cálculo ---------- */
+const sum=a=>a.reduce((s,x)=>s+(+x||0),0);
+const avg=a=>a.length?sum(a)/a.length:0;
+const pct=(n,d)=>d?Math.round(100*n/d):0;
+const num=v=>typeof v==='number'?v:(v==null?0:(parseInt(v)||0));
+const esc=s=>String(s||'').replace(/[<>&"]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]));
+function err(e){ const m=String(e.message||e); if(m.includes('Last parameter')||m.includes('do not have access')) return 'Tu plan no cubre esto todavía (necesitas Pro): '+m; return m; }
+// true si parece selección absoluta masculina (descarta Sub-XX, femenino, olímpicas, B)
+function isSenior(name){
+  const n=' '+String(name)+' ';
+  if(/\bU-?\s?\d{2}\b/i.test(n)) return false;            // U20, U-23, U 17
+  if(/\bSub-?\s?\d{2}\b/i.test(n)) return false;          // Sub-20
+  if(/\b(W|Women|Femenino|Femenina|Fem)\b/i.test(n)) return false;
+  if(/\(W\)/i.test(n)) return false;
+  if(/Ol[ií]mpic[ao]?|Olympic/i.test(n)) return false;
+  return true;
+}
+// ancho de columnas según el contenido (para Excel SheetJS)
+function fitCols(aoa){
+  const w=[];
+  aoa.forEach(r=>r.forEach((c,i)=>{ const l=(c==null?'':String(c)).length; w[i]=Math.max(w[i]||0,l); }));
+  return w.map(x=>({wch:Math.min(Math.max(x+2,8),60)}));
+}
+function played(f){ return f && f.goals && f.goals.home!=null && f.goals.away!=null; }
+function gfor(f,id){ return f.teams.home.id===+id?f.goals.home:f.goals.away; }
+function gag(f,id){ return f.teams.home.id===+id?f.goals.away:f.goals.home; }
+function outcome(f,id){ const a=gfor(f,id),b=gag(f,id); if(a==null)return null; return a>b?'W':a<b?'L':'D'; }
+
+/* ---------- Progreso ---------- */
+function prog(p,txt){ $('progress').classList.add('on'); $('barFill').style.width=p+'%'; $('progTxt').innerHTML='<span class="spin"></span>'+txt; }
+function progDone(){ $('barFill').style.width='100%'; setTimeout(()=>$('progress').classList.remove('on'),500); }
+function setStatus(m,t=''){ const e=$('status'); e.className=t; e.textContent=m; }
+
+/* ---------- ANALIZAR ---------- */
+$('analyze').onclick=()=>run(false);
+$('refresh').onclick=()=>run(true);
+
+async function run(force){
+  FORCE=force;
+  const A=$('teamA').value,B=$('teamB').value;
+  const nameA=$('teamA').selectedOptions[0].dataset.name, nameB=$('teamB').selectedOptions[0].dataset.name;
+  const season=+$('season').value.trim(), clubSeason=+$('clubSeason').value.trim();
+  const seasons=[season,season-1,season-2];                 // 3 años
+  const mkey=`match:${Math.min(A,B)}-${Math.max(A,B)}:${season}`;
+
+  // Caché por partido: si existe y no forzamos, úsala
+  if(!force){
+    const cached=Cache.get(mkey);
+    if(cached){ render(cached); setStatus('Cargado desde caché.','ok'); $('refresh').disabled=false; return; }
+  }
+
+  try{
+    $('analyze').disabled=true;
+    const pkg={A,B,nameA,nameB,season,ts:Date.now()};
+
+    // 1) Head-to-head (todo el historial; luego filtramos 3 años)
+    prog(8,'Descargando enfrentamientos directos…');
+    const h2hAll=(await api(`/fixtures/headtohead?h2h=${A}-${B}`)).response||[];
+    const minDate=new Date(); minDate.setFullYear(minDate.getFullYear()-3);
+    pkg.h2h=h2hAll.filter(f=>played(f) && new Date(f.fixture.date)>=minDate);
+
+    // 2) Fixtures de cada equipo, 3 temporadas, TODAS las competiciones
+    prog(26,'Descargando partidos (3 años, todas las competiciones)…');
+    pkg.fxA=await teamFixtures(A,seasons);
+    pkg.fxB=await teamFixtures(B,seasons);
+
+    // 3) Córners y tiros (stats de los últimos partidos jugados)
+    prog(48,'Calculando córners y tiros…');
+    pkg.setA=await setPieces(A,pkg.fxA);
+    pkg.setB=await setPieces(B,pkg.fxB);
+
+    // 4) Top 10 goleadores de cada selección/equipo
+    prog(66,'Buscando goleadores…');
+    pkg.topA=await topScorers(A,season);
+    pkg.topB=await topScorers(B,season);
+
+    // 5) Media de cada goleador en su club (temporada actual)
+    prog(84,'Cruzando rendimiento en club…');
+    await attachClub(pkg.topA,clubSeason);
+    await attachClub(pkg.topB,clubSeason);
+
+    progDone();
+    Cache.set(mkey,pkg);
+    render(pkg);
+    setStatus('Análisis completo.','ok');
+  }catch(e){ progDone(); setStatus(err(e),'err'); }
+  finally{ $('analyze').disabled=false; $('refresh').disabled=false; FORCE=false; }
+}
+
+/* Fixtures de un equipo en varias temporadas (una llamada por temporada = todas sus competiciones) */
+async function teamFixtures(team,seasons){
+  let all=[];
+  for(const s of seasons){
+    try{ const d=await api(`/fixtures?team=${team}&season=${s}`); all=all.concat(d.response||[]); }catch{}
+  }
+  return all.filter(played).sort((a,b)=>new Date(a.fixture.date)-new Date(b.fixture.date));
+}
+
+/* Córners / tiros: muestreo de los últimos 8 partidos jugados (1 llamada por partido) */
+async function setPieces(team,fixtures){
+  const recent=fixtures.slice(-8);
+  const corners=[],shots=[],sot=[],yc=[],rc=[];
+  for(const f of recent){
+    try{
+      const d=await api(`/fixtures/statistics?fixture=${f.fixture.id}`);
+      const mine=(d.response||[]).find(x=>x.team?.id===+team);
+      const get=l=>num((mine?.statistics||[]).find(z=>z.type===l)?.value);
+      corners.push(get('Corner Kicks')); shots.push(get('Total Shots')); sot.push(get('Shots on Goal'));
+      yc.push(get('Yellow Cards')); rc.push(get('Red Cards'));
+    }catch{}
+  }
+  return { corners:avg(corners), shots:avg(shots), sot:avg(sot), yc:avg(yc), rc:avg(rc), n:corners.length };
+}
+
+/* Top 10 goleadores del equipo en esa temporada */
+async function topScorers(team,season){
+  let players=[];
+  for(let page=1;page<=3;page++){
+    let d; try{ d=await api(`/players?team=${team}&season=${season}&page=${page}`); }catch{ break; }
+    (d.response||[]).forEach(p=>{
+      const mine=(p.statistics||[]).filter(s=>s.team&&s.team.id===+team);
+      const goals=sum(mine.map(s=>s.goals?.total));
+      const apps=sum(mine.map(s=>s.games?.appearences));
+      if(apps>0) players.push({id:p.player.id,name:p.player.name,goals,apps,club:null});
+    });
+    if(page>=(d.paging?.total||1)) break;
+  }
+  players.sort((a,b)=>b.goals-a.goals||b.apps-a.apps);
+  return players.slice(0,10);
+}
+
+/* Media de cada goleador en su club, temporada actual */
+async function attachClub(list,clubSeason){
+  for(const p of list){
+    try{
+      const d=await api(`/players?id=${p.id}&season=${clubSeason}`);
+      const stats=d.response?.[0]?.statistics||[];
+      // el club = la entrada con más apariciones (suele ser su liga)
+      let best=null;
+      stats.forEach(s=>{ if(!best||(s.games?.appearences||0)>(best.games?.appearences||0)) best=s; });
+      if(best) p.club={team:best.team?.name||'—',goals:num(best.goals?.total),apps:num(best.games?.appearences),
+                       rate:best.games?.appearences?(num(best.goals?.total)/best.games.appearences):0};
+    }catch{}
+  }
+}
+
+/* ---------- Estadísticas de un conjunto de fixtures para un equipo ---------- */
+function teamStats(fixtures,id){
+  const last=fixtures.slice(-15);                 // ventana reciente para forma
+  let w=0,d=0,l=0,gf=[],ga=[],btts=0,over=[],cum=[],pts=0;
+  const g1=[],g2=[]; let goal1H=0,goal2H=0;       // goles por tiempo (del partido)
+  last.forEach(f=>{
+    const o=outcome(f,id);
+    if(o==='W'){w++;pts+=3;}else if(o==='D'){d++;pts+=1;}else if(o==='L')l++;
+    const a=gfor(f,id),b=gag(f,id); gf.push(a);ga.push(b);
+    if(a>0&&b>0)btts++; over.push((a+b)>2.5?1:0); cum.push(pts);
+    const ht=f.score&&f.score.halftime;
+    if(ht && ht.home!=null){
+      const first=(ht.home||0)+(ht.away||0);
+      const total=f.goals.home+f.goals.away;
+      g1.push(first); g2.push(Math.max(0,total-first));
+      if(first>0)goal1H++; if((total-first)>0)goal2H++;
+    }
+  });
+  const nHt=g1.length;
+  return {n:last.length,record:`${w}-${d}-${l}`,ppg:last.length?pts/last.length:0,
+    gf:avg(gf),ga:avg(ga),btts:pct(btts,last.length),over25:pct(sum(over),last.length),cum,
+    g1:avg(g1),g2:avg(g2),over05_1H:pct(goal1H,nHt),goal2Hpct:pct(goal2H,nHt),nHt};
+}
+
+/* ---------- RENDER ---------- */
+let charts={};
+let LAST=null;
+function render(p){
+  LAST=p;
+  $('results').classList.remove('hidden');
+  $('nameA').textContent=p.nameA; $('nameB').textContent=p.nameB;
+  const ageMin=Math.round((Date.now()-p.ts)/60000);
+  $('cacheInfo').textContent='Datos calculados '+(ageMin<1?'ahora mismo':('hace '+ageMin+' min'))+' · pulsa Actualizar para refrescar';
+
+  const sa=teamStats(p.fxA,p.A), sb=teamStats(p.fxB,p.B);
+
+  // H2H
+  let wA=0,wB=0,dr=0,tot=[],hb=0,ho=0;
+  p.h2h.forEach(f=>{ const o=outcome(f,+p.A); if(o==='W')wA++;else if(o==='L')wB++;else dr++;
+    const t=f.goals.home+f.goals.away; tot.push(t); if(f.goals.home>0&&f.goals.away>0)hb++; if(t>2.5)ho++; });
+  const hN=p.h2h.length;
+  $('h2hKpis').innerHTML=kpi(wA,'Gana '+p.nameA)+kpi(dr,'Empates')+kpi(wB,'Gana '+p.nameB)+kpi(hN,'Partidos (3 años)');
+
+  // Comparativa
+  $('cmp').innerHTML=[
+    cmpRow('Forma · pts por partido',sa.ppg.toFixed(2),sb.ppg.toFixed(2),sa.ppg,sb.ppg),
+    cmpRow('Goles a favor',sa.gf.toFixed(2),sb.gf.toFixed(2),sa.gf,sb.gf),
+    cmpRow('Goles en contra',sa.ga.toFixed(2),sb.ga.toFixed(2),sa.ga,sb.ga,true),
+    cmpRow('Córners / partido',p.setA.corners.toFixed(1),p.setB.corners.toFixed(1),p.setA.corners,p.setB.corners),
+    cmpRow('Tiros / partido',p.setA.shots.toFixed(1),p.setB.shots.toFixed(1),p.setA.shots,p.setB.shots),
+    cmpRow('Tiros a puerta / partido',p.setA.sot.toFixed(1),p.setB.sot.toFixed(1),p.setA.sot,p.setB.sot),
+    cmpRow('Amarillas / partido',p.setA.yc.toFixed(1),p.setB.yc.toFixed(1),p.setA.yc,p.setB.yc),
+    cmpRow('Goles 1er tiempo',sa.g1.toFixed(2),sb.g1.toFixed(2),sa.g1,sb.g1),
+    cmpRow('Goles 2do tiempo',sa.g2.toFixed(2),sb.g2.toFixed(2),sa.g2,sb.g2),
+  ].join('');
+
+  // Parámetros de apuesta
+  $('bets').innerHTML=buildBets(p,sa,sb,{wA,wB,dr,hN,hb,ho,tot});
+
+  // Charts
+  drawGoals(p,sa,sb); drawSet(p); drawH2H(wA,dr,wB,p); drawForm(p,sa,sb);
+
+  // Goleadores
+  $('scTitleA').textContent='Top 10 goleadores · '+p.nameA;
+  $('scTitleB').textContent='Top 10 goleadores · '+p.nameB;
+  renderScorers('scA',p.topA,p.nameA); renderScorers('scB',p.topB,p.nameB);
+
+  // H2H detalle
+  const hb2=$('h2hTable').querySelector('tbody');
+  hb2.innerHTML='<tr><th>Fecha</th><th>Local</th><th style="text-align:center">Result.</th><th>Visitante</th><th>Competición</th></tr>'+
+    (p.h2h.length?p.h2h.slice().reverse().slice(0,20).map(f=>`<tr><td class="mono">${(f.fixture.date||'').slice(0,10)}</td>
+      <td>${esc(f.teams.home.name)}</td><td class="mono" style="text-align:center">${f.goals.home}-${f.goals.away}</td>
+      <td>${esc(f.teams.away.name)}</td><td style="color:var(--muted)">${esc(f.league?.name||'')}</td></tr>`).join('')
+      :'<tr><td class="nodata">Sin enfrentamientos directos en 3 años.</td></tr>');
+
+  $('results').scrollIntoView({behavior:'smooth'});
+}
+
+function kpi(v,l){return `<div class="kpi"><div class="v">${v}</div><div class="l">${l}</div></div>`;}
+function cmpRow(lab,va,vb,na,nb,inv){
+  const a=+na||0,b=+nb||0,t=a+b; let ph=t?100*a/t:50,pa=t?100*b/t:50;
+  if(inv){const x=ph;ph=pa;pa=x;}  // en "goles en contra", menos es mejor: invertimos el peso visual
+  return `<div class="row"><div class="lab">${lab}</div>
+    <div class="va">${va}</div>
+    <div class="meter"><div class="mh" style="width:${ph}%"></div><div class="ma" style="width:${pa}%"></div></div>
+    <div class="vb">${vb}</div></div>`;
+}
+
+function renderScorers(tid,list,team){
+  const tb=$(tid).querySelector('tbody');
+  if(!list||!list.length){ tb.innerHTML='<tr><td class="nodata">Sin datos de goleadores (¿plan gratis o temporada no cubierta?).</td></tr>'; return; }
+  tb.innerHTML='<tr><th>#</th><th>Jugador</th><th class="num">Goles '+esc(team)+'</th><th class="num">Part.</th><th>Club actual</th><th class="num">Goles club</th><th class="num">Media club</th></tr>'+
+    list.map((p,i)=>{
+      const c=p.club;
+      return `<tr><td class="mono">${i+1}</td><td>${esc(p.name)}</td>
+        <td class="num">${p.goals}</td><td class="num">${p.apps}</td>
+        <td>${c?esc(c.team):'<span class="nodata">sin datos</span>'}</td>
+        <td class="num">${c?c.goals:'—'}</td>
+        <td class="num">${c?c.rate.toFixed(2):'—'}</td></tr>`;
+    }).join('');
+}
+
+/* ---------- Lógica de parámetros de apuesta ---------- */
+function buildBets(p,sa,sb,h){
+  const cards=[];
+  // 1X2
+  const lean=sa.ppg-sb.ppg;
+  let rV='mid',rT='Equilibrado';
+  if(lean>0.5){rV='go';rT='Gana '+p.nameA;} else if(lean<-0.5){rV='go';rT='Gana '+p.nameB;}
+  cards.push(bet(rV,rT,'Resultado (1X2)',
+    `${p.nameA} ${sa.ppg.toFixed(2)} pts/p vs ${p.nameB} ${sb.ppg.toFixed(2)} pts/p. H2H: ${h.wA}-${h.dr}-${h.wB}.`));
+
+  // Over/Under 2.5
+  const ovTeam=Math.round((sa.over25+sb.over25)/2);
+  const ovH2H=h.hN?pct(h.ho,h.hN):null;
+  const ov=ovH2H!=null?Math.round((ovTeam*2+ovH2H)/3):ovTeam;
+  cards.push(bet(ov>=58?'go':ov<=42?'no':'mid', ov>=58?'OVER 2.5':ov<=42?'UNDER 2.5':'Ajustado','Total de goles',
+    `Equipos: ${ovTeam}% over en su forma. ${ovH2H!=null?'H2H: '+ovH2H+'% over.':''} Señal combinada: ${ov}%.`));
+
+  // BTTS
+  const bt=h.hN?Math.round((sa.btts+sb.btts+pct(h.hb,h.hN))/3):Math.round((sa.btts+sb.btts)/2);
+  cards.push(bet(bt>=58?'go':bt<=42?'no':'mid', bt>=58?'BTTS: Sí':bt<=42?'BTTS: No':'Ajustado','Ambos marcan',
+    `${p.nameA} ${sa.btts}% · ${p.nameB} ${sb.btts}%${h.hN?' · H2H '+pct(h.hb,h.hN)+'%':''}. Señal: ${bt}%.`));
+
+  // Córners
+  const cT=p.setA.corners+p.setB.corners;
+  const line=Math.max(0,Math.floor(cT)) + 0.5;
+  cards.push(bet(p.setA.n+p.setB.n?'mid':'no', cT?('Línea ~'+line):'Sin datos','Córners totales',
+    p.setA.n+p.setB.n?`Proyección ${cT.toFixed(1)} (${p.nameA} ${p.setA.corners.toFixed(1)} + ${p.nameB} ${p.setB.corners.toFixed(1)}). Tendencia: ${cT>line?'OVER':'UNDER'} ${line}.`
+      :'No hubo estadísticas de córners disponibles en la muestra.'));
+
+  // Goleador candidato
+  const tA=p.topA?.find(x=>x.club&&x.club.rate>0), tB=p.topB?.find(x=>x.club&&x.club.rate>0);
+  const cand=[tA&&`${tA.name} (${tA.club.rate.toFixed(2)} g/p en ${tA.club.team})`,
+              tB&&`${tB.name} (${tB.club.rate.toFixed(2)} g/p en ${tB.club.team})`].filter(Boolean).join(' · ');
+  cards.push(bet(cand?'go':'no','Goleador',(cand?'Candidatos a marcar':'Sin datos'),
+    cand||'Sin datos de club para estimar goleadores.'));
+
+  // Tiros
+  const shT=p.setA.shots+p.setB.shots;
+  cards.push(bet(p.setA.n+p.setB.n?'mid':'no',shT?shT.toFixed(0)+' tiros':'Sin datos','Tiros totales (ritmo)',
+    p.setA.n+p.setB.n?`${p.nameA} ${p.setA.shots.toFixed(1)} y ${p.nameB} ${p.setB.shots.toFixed(1)} tiros/p (a puerta: ${p.setA.sot.toFixed(1)} / ${p.setB.sot.toFixed(1)}).`
+      :'No hubo estadísticas de tiros disponibles en la muestra.'));
+
+  // Tarjetas totales
+  const cardsT=p.setA.yc+p.setB.yc, cline=Math.max(0,Math.floor(cardsT))+0.5;
+  cards.push(bet(p.setA.n+p.setB.n?'mid':'no', cardsT?('Línea ~'+cline):'Sin datos','Tarjetas (amarillas)',
+    p.setA.n+p.setB.n?`Proyección ${cardsT.toFixed(1)} amarillas (${p.nameA} ${p.setA.yc.toFixed(1)} + ${p.nameB} ${p.setB.yc.toFixed(1)}). Tendencia: ${cardsT>cline?'OVER':'UNDER'} ${cline}.`
+      :'No hubo estadísticas de tarjetas en la muestra.'));
+
+  // Goles 1er tiempo
+  const g1T=sa.g1+sb.g1, o05=Math.round((sa.over05_1H+sb.over05_1H)/2);
+  cards.push(bet(o05>=62?'go':o05<=40?'no':'mid', o05>=62?'OVER 0.5 (1T)':o05<=40?'UNDER 0.5 (1T)':'Ajustado','Goles 1er tiempo',
+    `Proyección ${g1T.toFixed(2)} goles en el 1T. Marcan en el 1T: ${p.nameA} ${sa.over05_1H}% · ${p.nameB} ${sb.over05_1H}%. Señal Over 0.5: ${o05}%.`));
+
+  return cards.join('');
+}
+function bet(v,verdict,title,desc){
+  return `<div class="bet"><div class="verdict ${v}">${esc(verdict)}</div>
+    <div class="body"><div class="t">${esc(title)}</div><div class="d">${esc(desc)}</div></div></div>`;
+}
+
+/* ---------- Gráficos ---------- */
+const C={text:'#8794A6',grid:'#28303D',home:'#5AA9FF',away:'#FF7A6B',amber:'#F2A93B',teal:'#46B8A8'};
+Chart.defaults.color=C.text; Chart.defaults.font.family="'Space Mono',monospace";
+function fresh(id){ if(charts[id])charts[id].destroy(); return $(id).getContext('2d'); }
+function drawGoals(p,sa,sb){
+  charts.g=new Chart(fresh('chGoals'),{type:'bar',
+    data:{labels:['A favor','En contra'],datasets:[
+      {label:p.nameA,data:[sa.gf.toFixed(2),sa.ga.toFixed(2)],backgroundColor:C.home},
+      {label:p.nameB,data:[sb.gf.toFixed(2),sb.ga.toFixed(2)],backgroundColor:C.away}]},
+    options:{plugins:{legend:{labels:{boxWidth:12}}},scales:{y:{beginAtZero:true,grid:{color:C.grid}},x:{grid:{display:false}}}}});
+}
+function drawSet(p){
+  charts.s=new Chart(fresh('chSet'),{type:'bar',
+    data:{labels:['Córners','Tiros','Tiros a puerta'],datasets:[
+      {label:p.nameA,data:[p.setA.corners,p.setA.shots,p.setA.sot],backgroundColor:C.home},
+      {label:p.nameB,data:[p.setB.corners,p.setB.shots,p.setB.sot],backgroundColor:C.away}]},
+    options:{plugins:{legend:{labels:{boxWidth:12}}},scales:{y:{beginAtZero:true,grid:{color:C.grid}},x:{grid:{display:false}}}}});
+}
+function drawH2H(wA,dr,wB,p){
+  charts.h=new Chart(fresh('chH2H'),{type:'doughnut',
+    data:{labels:[p.nameA,'Empates',p.nameB],datasets:[{data:[wA,dr,wB],backgroundColor:[C.home,C.amber,C.away],borderColor:'#141923',borderWidth:2}]},
+    options:{plugins:{legend:{position:'bottom',labels:{boxWidth:12}}}}});
+}
+function drawForm(p,sa,sb){
+  const n=Math.max(sa.cum.length,sb.cum.length);
+  charts.f=new Chart(fresh('chForm'),{type:'line',
+    data:{labels:Array.from({length:n},(_,i)=>'P'+(i+1)),datasets:[
+      {label:p.nameA,data:sa.cum,borderColor:C.home,tension:.3,pointRadius:2},
+      {label:p.nameB,data:sb.cum,borderColor:C.away,tension:.3,pointRadius:2}]},
+    options:{plugins:{legend:{labels:{boxWidth:12}}},scales:{y:{beginAtZero:true,grid:{color:C.grid}},x:{grid:{display:false}}}}});
+}
+
+/* ---------- Exportar para otra IA (JSON estructurado + prompt) ---------- */
+function buildExport(p){
+  const sa=teamStats(p.fxA,p.A), sb=teamStats(p.fxB,p.B);
+  let wA=0,wB=0,dr=0,tot=[],hb=0,ho=0;
+  p.h2h.forEach(f=>{const o=outcome(f,+p.A);if(o==='W')wA++;else if(o==='L')wB++;else dr++;
+    const t=f.goals.home+f.goals.away;tot.push(t);if(f.goals.home>0&&f.goals.away>0)hb++;if(t>2.5)ho++;});
+  const hN=p.h2h.length;
+  const teamBlock=(name,s,set,top)=>({
+    nombre:name,
+    forma:{record:s.record, puntos_por_partido:+s.ppg.toFixed(2), partidos_analizados:s.n},
+    goles:{a_favor_media:+s.gf.toFixed(2), en_contra_media:+s.ga.toFixed(2), over25_pct:s.over25, btts_pct:s.btts},
+    balon_parado:{corners_media:+set.corners.toFixed(2), tiros_media:+set.shots.toFixed(2), tiros_a_puerta_media:+set.sot.toFixed(2), muestra_partidos:set.n},
+    tarjetas:{amarillas_media:+set.yc.toFixed(2), rojas_media:+set.rc.toFixed(2)},
+    tiempos:{goles_1er_tiempo_media:+s.g1.toFixed(2), goles_2do_tiempo_media:+s.g2.toFixed(2), pct_marca_en_1T:s.over05_1H, pct_marca_en_2T:s.goal2Hpct},
+    top_goleadores:(top||[]).map(t=>({
+      jugador:t.nombre||t.name, goles_con_equipo:t.goals, partidos:t.apps,
+      club_actual:t.club?t.club.team:null, goles_en_club:t.club?t.club.goals:null,
+      partidos_club:t.club?t.club.apps:null, media_gol_club:t.club?+t.club.rate.toFixed(2):null
+    }))
+  });
+  return {
+    meta:{generado:new Date().toISOString(), fuente:'API-Football', ventana_historica:'3 años',
+      temporada_competicion:p.season, nota:'Todos los números provienen de datos reales de la API; nada está inventado.'},
+    partido:{local:p.nameA, visitante:p.nameB},
+    head_to_head_3y:{partidos:hN, victorias_local:wA, empates:dr, victorias_visitante:wB,
+      media_goles_totales:hN?+(sum(tot)/hN).toFixed(2):null, btts_pct:hN?pct(hb,hN):null, over25_pct:hN?pct(ho,hN):null,
+      detalle:p.h2h.slice().reverse().slice(0,20).map(f=>({fecha:(f.fixture.date||'').slice(0,10),
+        local:f.teams.home.name, marcador:`${f.goals.home}-${f.goals.away}`, visitante:f.teams.away.name, competicion:f.league?.name}))},
+    equipos:{local:teamBlock(p.nameA,sa,p.setA,p.topA), visitante:teamBlock(p.nameB,sb,p.setB,p.topB)}
+  };
+}
+function buildPrompt(p){
+  const data=buildExport(p);
+  return `Actúa como analista profesional de apuestas deportivas de fútbol.
+
+MIS NECESIDADES:
+- Quiero apostar en Bet365 en el partido ${p.nameA} (local) vs ${p.nameB} (visitante).
+- Dame recomendaciones CLARAS y accionables para estos mercados: resultado 1X2, Over/Under 2.5 goles, Ambos marcan (BTTS), línea de córners, y goleador probable.
+- Para cada mercado: indica el pick, una confianza (alta/media/baja) y la razón basada SOLO en los datos de abajo.
+- Señala los riesgos y dónde los datos son insuficientes. No inventes cifras que no estén en el JSON.
+- Resume al final con mi "apuesta sugerida" y una combinada de bajo riesgo si la hay.
+
+REGLAS:
+- Usa únicamente los datos del JSON. Si falta algo (ej. goleadores "null"), dilo en vez de suponer.
+- Recuerda que son frecuencias históricas, no garantías; menciónalo brevemente.
+
+DATOS DEL PARTIDO (JSON):
+${JSON.stringify(data,null,2)}`;
+}
+function download(name,text,type){
+  const b=new Blob([text],{type}); const u=URL.createObjectURL(b);
+  const a=document.createElement('a'); a.href=u; a.download=name; a.click(); URL.revokeObjectURL(u);
+}
+$('copyExport').onclick=async()=>{
+  if(!LAST){return;}
+  const txt=buildPrompt(LAST);
+  try{ await navigator.clipboard.writeText(txt); $('exportMsg').innerHTML='<b style="color:var(--green)">Copiado.</b> Pégalo en la otra IA.'; }
+  catch{ download(`prompt_${LAST.nameA}_vs_${LAST.nameB}.txt`,txt,'text/plain'); $('exportMsg').innerHTML='No pude copiar; te lo descargué como .txt.'; }
+};
+$('dlExport').onclick=()=>{
+  if(!LAST){return;}
+  download(`datos_${LAST.nameA}_vs_${LAST.nameB}.json`, JSON.stringify(buildExport(LAST),null,2),'application/json');
+  $('exportMsg').innerHTML='<b style="color:var(--green)">JSON descargado.</b>';
+};
+
+/* ---------- Exportar Excel: histórico partido a partido (3 años) ---------- */
+function xprog(p,t){ $('xlsProg').classList.add('on'); $('xlsFill').style.width=p+'%'; $('xlsTxt').innerHTML='<span class="spin"></span>'+t; }
+function safeSheet(n){ return String(n).replace(/[:\\\/?*\[\]]/g,'').slice(0,28)||'Equipo'; }
+
+async function teamMatchRows(team,name,seasons,maxPer,phaseBase){
+  // fixtures de 3 años (todas las competiciones), ya cacheados si analizaste antes
+  const fx=(await teamFixtures(team,seasons)).slice(-maxPer);
+  const head=['Fecha','Competición','Condición','Rival','Marcador','Tiros esquina','Remates al arco','Remates totales','Amarillas','Rojas','Marcador 1T','Goles 1T','Goles 2T'];
+  const rows=[head];
+  const corners=[],sot=[],shots=[],yc=[],rc=[];
+  const gf=[],ga=[],totG=[]; let btts=0;
+  const gfH=[],gaH=[],gfA=[],gaA=[]; let w=0,d=0,l=0;
+  const g1=[],g2=[]; let goal1H=0,goal2H=0;
+  for(let i=0;i<fx.length;i++){
+    const f=fx[i]; let c=null,sg=null,sh=null,ye=null,re=null;
+    try{
+      const dt=await api(`/fixtures/statistics?fixture=${f.fixture.id}`);
+      const mine=(dt.response||[]).find(x=>x.team?.id===+team);
+      const get=L=>{const v=(mine?.statistics||[]).find(z=>z.type===L)?.value; return v==null?null:num(v);};
+      c=get('Corner Kicks'); sg=get('Shots on Goal'); sh=get('Total Shots'); ye=get('Yellow Cards'); re=get('Red Cards');
+    }catch{}
+    if(c!=null)corners.push(c); if(sg!=null)sot.push(sg); if(sh!=null)shots.push(sh);
+    if(ye!=null)yc.push(ye); if(re!=null)rc.push(re);
+    const home=f.teams.home.id===+team, rival=home?f.teams.away.name:f.teams.home.name;
+    const a=gfor(f,team), b=gag(f,team);
+    gf.push(a); ga.push(b); totG.push(a+b); if(a>0&&b>0)btts++;
+    const o=outcome(f,team); if(o==='W')w++;else if(o==='D')d++;else if(o==='L')l++;
+    if(home){gfH.push(a);gaH.push(b);}else{gfA.push(a);gaA.push(b);}
+    // goles por tiempo (del partido)
+    const ht=f.score&&f.score.halftime; let htStr='s/d', first='s/d', second='s/d';
+    if(ht && ht.home!=null){ const fst=(ht.home||0)+(ht.away||0), tot=f.goals.home+f.goals.away;
+      htStr=`${ht.home}-${ht.away}`; first=fst; second=Math.max(0,tot-fst);
+      g1.push(fst); g2.push(Math.max(0,tot-fst)); if(fst>0)goal1H++; if((tot-fst)>0)goal2H++; }
+    rows.push([(f.fixture.date||'').slice(0,10), f.league?.name||'', home?'Local':'Visitante', rival,
+      `${f.goals.home}-${f.goals.away}`, c==null?'s/d':c, sg==null?'s/d':sg, sh==null?'s/d':sh,
+      ye==null?'s/d':ye, re==null?'s/d':re, htStr, first, second]);
+    xprog(phaseBase + Math.round((i+1)/fx.length*30), `Stats de ${name}: ${i+1}/${fx.length}`);
+  }
+  const nHt=g1.length;
+  return {rows, n:fx.length,
+    corners:avg(corners), sot:avg(sot), shots:avg(shots), yc:avg(yc), rc:avg(rc),
+    cPct:pctOver(corners), sgPct:pctOver(sot), shPct:pctOver(shots),
+    gf:avg(gf), ga:avg(ga), tot:avg(totG), bttsPct:pct(btts,fx.length),
+    over25:pct(totG.filter(x=>x>2.5).length,fx.length),
+    g1:avg(g1), g2:avg(g2), over05_1H:pct(goal1H,nHt), goal2Hpct:pct(goal2H,nHt), nHt,
+    w,d,l, gfH:avg(gfH), gaH:avg(gaH), gfA:avg(gfA), gaA:avg(gaA), nH:gfH.length, nA:gfA.length};
+}
+// % de partidos en que el valor supera el 80% del promedio
+function pctOver(arr){ if(!arr.length)return 0; const th=avg(arr)*0.8; return pct(arr.filter(x=>x>=th).length,arr.length); }
+
+/* Ficha completa de un equipo: perfil de la API + promedios + goleadores */
+async function buildFicha(team,name,season,clubSeason,stats,phaseBase){
+  xprog(phaseBase,`Ficha de ${name}…`);
+  const aoa=[];
+  aoa.push([name+' — FICHA']); aoa.push([]);
+
+  // 1) Perfil de temporada (API) — requiere liga seleccionada
+  aoa.push(['PERFIL DE TEMPORADA (API)']);
+  let prof=null;
+  if(LEAGUE_ID){
+    try{ prof=(await api(`/teams/statistics?league=${LEAGUE_ID}&season=${season}&team=${team}`)).response; }catch{}
+  }
+  if(prof && prof.fixtures){
+    const fxs=prof.fixtures, gl=prof.goals;
+    aoa.push(['Partidos jugados', fxs.played?.total, 'Local', fxs.played?.home, 'Visitante', fxs.played?.away]);
+    aoa.push(['Ganados', fxs.wins?.total, 'Empatados', fxs.draws?.total, 'Perdidos', fxs.loses?.total]);
+    aoa.push(['Goles a favor (total)', gl?.for?.total?.total, 'Media', gl?.for?.average?.total]);
+    aoa.push(['Goles en contra (total)', gl?.against?.total?.total, 'Media', gl?.against?.average?.total]);
+    aoa.push(['Vallas invictas', prof.clean_sheet?.total, 'Sin marcar', prof.failed_to_score?.total]);
+    aoa.push(['Racha (form)', prof.form||'—']);
+    if(prof.biggest){ aoa.push(['Mayor victoria', (prof.biggest.wins?.home||'')+' / '+(prof.biggest.wins?.away||''),
+      'Mayor derrota', (prof.biggest.loses?.home||'')+' / '+(prof.biggest.loses?.away||'')]); }
+  }else{
+    aoa.push([LEAGUE_ID?'Sin perfil para esta liga/temporada (¿plan o cobertura?).':'Selecciona una liga arriba para incluir el perfil de la API.']);
+  }
+  aoa.push([]);
+
+  // 2) Promedios calculados (de los partidos analizados)
+  aoa.push(['PROMEDIOS CALCULADOS (3 años, '+stats.n+' partidos)']);
+  aoa.push(['Récord (V-E-D)', `${stats.w}-${stats.d}-${stats.l}`]);
+  aoa.push(['Goles a favor / partido', r2(stats.gf), 'Goles en contra / partido', r2(stats.ga)]);
+  aoa.push(['Total goles / partido', r2(stats.tot), 'Over 2.5 %', stats.over25+'%', 'BTTS %', stats.bttsPct+'%']);
+  aoa.push(['Córners / partido', r2(stats.corners), '% supera 80%', stats.cPct+'%']);
+  aoa.push(['Remates al arco / partido', r2(stats.sot), '% supera 80%', stats.sgPct+'%']);
+  aoa.push(['Remates totales / partido', r2(stats.shots), '% supera 80%', stats.shPct+'%']);
+  aoa.push([]);
+  aoa.push(['TARJETAS Y TIEMPOS']);
+  aoa.push(['Amarillas / partido', r2(stats.yc), 'Rojas / partido', r2(stats.rc)]);
+  aoa.push(['Goles 1er tiempo / partido', r2(stats.g1), 'Goles 2do tiempo / partido', r2(stats.g2)]);
+  aoa.push(['% partidos con gol en 1T', stats.over05_1H+'%', '% partidos con gol en 2T', stats.goal2Hpct+'%']);
+  aoa.push([]);
+  aoa.push(['LOCAL vs VISITANTE']);
+  aoa.push(['', 'Goles a favor', 'Goles en contra', 'Partidos']);
+  aoa.push(['De local', r2(stats.gfH), r2(stats.gaH), stats.nH]);
+  aoa.push(['De visitante', r2(stats.gfA), r2(stats.gaA), stats.nA]);
+  aoa.push([]);
+
+  // 3) Top goleadores + media en club
+  aoa.push(['TOP GOLEADORES']);
+  aoa.push(['#','Jugador','Goles con '+name,'Partidos','Club actual','Goles club','Media gol club']);
+  let top=[];
+  try{ top=await topScorers(team,season); await attachClub(top,clubSeason); }catch{}
+  if(top.length){ top.forEach((p,i)=>aoa.push([i+1,p.name,p.goals,p.apps,
+    p.club?p.club.team:'s/d', p.club?p.club.goals:'s/d', p.club?r2(p.club.rate):'s/d'])); }
+  else aoa.push(['Sin datos de goleadores (¿plan o temporada?).']);
+
+  return aoa;
+}
+
+$('dlExcel').onclick=async()=>{
+  const A=$('teamA').value,B=$('teamB').value;
+  if(!A||!B||A===B){ $('excelMsg').innerHTML='<b style="color:var(--red)">Elige los dos equipos primero.</b>'; return; }
+  const nameA=$('teamA').selectedOptions[0].dataset.name||$('teamA').selectedOptions[0].textContent;
+  const nameB=$('teamB').selectedOptions[0].dataset.name||$('teamB').selectedOptions[0].textContent;
+  const season=+$('season').value.trim(), clubSeason=+$('clubSeason').value.trim(), seasons=[season,season-1,season-2];
+  const maxPer=Math.max(1,Math.min(80,+$('xlsMax').value||25));
+  try{
+    $('dlExcel').disabled=true;
+    xprog(5,'Descargando partidos (3 años)…');
+    const a=await teamMatchRows(A,nameA,seasons,maxPer,8);
+    const b=await teamMatchRows(B,nameB,seasons,maxPer,42);
+    const fichaA=await buildFicha(A,nameA,season,clubSeason,a,76);
+    const fichaB=await buildFicha(B,nameB,season,clubSeason,b,86);
+    xprog(95,'Armando el Excel…');
+
+    const wb=XLSX.utils.book_new();
+    const resumen=[
+      ['Equipo','Prom. Córners','80% Córners','% cumple','Prom. Remates al arco','80%','% cumple','Prom. Remates','80%','% cumple','Amarillas','Rojas','Goles 1T','Goles 2T','Partidos'],
+      [nameA, r2(a.corners), r2(a.corners*0.8), a.cPct+'%', r2(a.sot), r2(a.sot*0.8), a.sgPct+'%', r2(a.shots), r2(a.shots*0.8), a.shPct+'%', r2(a.yc), r2(a.rc), r2(a.g1), r2(a.g2), a.n],
+      [nameB, r2(b.corners), r2(b.corners*0.8), b.cPct+'%', r2(b.sot), r2(b.sot*0.8), b.sgPct+'%', r2(b.shots), r2(b.shots*0.8), b.shPct+'%', r2(b.yc), r2(b.rc), r2(b.g1), r2(b.g2), b.n],
+    ];
+    const mk=(aoa,name)=>{ const ws=XLSX.utils.aoa_to_sheet(aoa); ws['!cols']=fitCols(aoa); XLSX.utils.book_append_sheet(wb,ws,name); };
+    mk(resumen,'Resumen');
+    mk(fichaA,safeSheet('Ficha '+nameA));
+    mk(fichaB,safeSheet('Ficha '+nameB));
+    mk(a.rows,safeSheet(nameA));
+    mk(b.rows,safeSheet(nameB));
+    XLSX.writeFile(wb, `historico_${safeSheet(nameA)}_vs_${safeSheet(nameB)}.xlsx`);
+
+    $('xlsFill').style.width='100%'; setTimeout(()=>$('xlsProg').classList.remove('on'),500);
+    $('excelMsg').innerHTML='<b style="color:var(--green)">Excel descargado.</b> Hojas: Resumen, Ficha de cada equipo, y partido a partido.';
+  }catch(e){ $('xlsProg').classList.remove('on'); $('excelMsg').innerHTML='<b style="color:var(--red)">'+esc(err(e))+'</b>'; }
+  finally{ $('dlExcel').disabled=false; }
+};
+const r2=x=>Math.round((+x||0)*100)/100;
+
+/* ---------- Excel de liga completa (escaneo con verde/rojo) ---------- */
+function lgprog(p,t){ $('lgProg').classList.add('on'); $('lgFill').style.width=p+'%'; $('lgTxt').innerHTML='<span class="spin"></span>'+t; }
+
+// Promedios de un equipo en la temporada (córners, remates, remates al arco) + último valor
+async function teamAverages(team,season,maxPer){
+  let fx=[];
+  try{
+    fx=((await api(`/fixtures?team=${team}&season=${season}`)).response||[]).filter(played)
+        .sort((a,b)=>new Date(a.fixture.date)-new Date(b.fixture.date)).slice(-maxPer);
+  }catch{}
+  const C=[],S=[],G=[],Y=[];
+  for(const f of fx){
+    try{
+      const d=await api(`/fixtures/statistics?fixture=${f.fixture.id}`);
+      const mine=(d.response||[]).find(x=>x.team?.id===+team);
+      const get=L=>{const v=(mine?.statistics||[]).find(z=>z.type===L)?.value; return v==null?null:num(v);};
+      const c=get('Corner Kicks'), sg=get('Shots on Goal'), sh=get('Total Shots'), y=get('Yellow Cards');
+      if(c!=null)C.push(c); if(sg!=null)S.push(sg); if(sh!=null)G.push(sh); if(y!=null)Y.push(y);
+    }catch{}
+  }
+  return {corners:avg(C), sot:avg(S), shots:avg(G), yc:avg(Y),
+    lastC:C.length?C[C.length-1]:null, lastSg:S.length?S[S.length-1]:null, lastSh:G.length?G[G.length-1]:null,
+    lastY:Y.length?Y[Y.length-1]:null, n:fx.length};
+}
+
+$('dlLeague').onclick=async()=>{
+  if(!LEAGUE_ID){ $('leagueMsg').innerHTML='<b style="color:var(--red)">Elige una liga arriba (en el buscador) primero.</b>'; return; }
+  const season=+$('season').value.trim();
+  const maxPer=Math.max(1,Math.min(40,+$('lgMax').value||12));
+  try{
+    $('dlLeague').disabled=true;
+    lgprog(4,'Cargando equipos de la liga…');
+    const teams=((await api(`/teams?league=${LEAGUE_ID}&season=${season}`)).response||[]).map(t=>t.team);
+    if(!teams.length){ throw new Error('Esa liga/temporada no tiene equipos (revisa el año).'); }
+    const rows=[];
+    for(let i=0;i<teams.length;i++){
+      const t=teams[i];
+      rows.push({name:t.name, ...(await teamAverages(t.id,season,maxPer))});
+      lgprog(4+Math.round((i+1)/teams.length*90), `Equipo ${i+1}/${teams.length}: ${t.name}`);
+    }
+    lgprog(97,'Pintando el Excel…');
+    await buildLeagueExcel(rows, season);
+    $('lgFill').style.width='100%'; setTimeout(()=>$('lgProg').classList.remove('on'),500);
+    $('leagueMsg').innerHTML='<b style="color:var(--green)">Excel de liga descargado.</b> '+rows.length+' equipos.';
+  }catch(e){ $('lgProg').classList.remove('on'); $('leagueMsg').innerHTML='<b style="color:var(--red)">'+esc(err(e))+'</b>'; }
+  finally{ $('dlLeague').disabled=false; }
+};
+
+async function buildLeagueExcel(rows, season){
+  const wb=new ExcelJS.Workbook();
+  const ws=wb.addWorksheet('Liga '+season);
+  const HEAD='FF22303F', GREEN='FF2E8B57', RED='FFCC3B36';
+  ws.addRow(['Equipo','Prom. Córners','80%','Último','Prom. Remates al arco','80%','Último','Prom. Remates','80%','Último','Prom. Amarillas','80%','Último','Partidos']);
+  ws.columns=[{width:24},{width:13},{width:8},{width:10},{width:20},{width:8},{width:10},{width:14},{width:8},{width:10},{width:14},{width:8},{width:10},{width:9}];
+  ws.getRow(1).eachCell(c=>{ c.fill={type:'pattern',pattern:'solid',fgColor:{argb:HEAD}}; c.font={color:{argb:'FFFFFFFF'},bold:true}; c.alignment={horizontal:'center',wrapText:true}; });
+  rows.sort((a,b)=>b.corners-a.corners);   // los que más córners generan, arriba
+  const paint=(cell,val,th)=>{ if(val==null)return; cell.fill={type:'pattern',pattern:'solid',fgColor:{argb: val>=th?GREEN:RED}}; cell.font={color:{argb:'FFFFFFFF'},bold:true}; cell.alignment={horizontal:'center'}; };
+  rows.forEach(r=>{
+    const row=ws.addRow([r.name,
+      r2(r.corners), r2(r.corners*0.8), r.lastC==null?'s/d':r.lastC,
+      r2(r.sot), r2(r.sot*0.8), r.lastSg==null?'s/d':r.lastSg,
+      r2(r.shots), r2(r.shots*0.8), r.lastSh==null?'s/d':r.lastSh,
+      r2(r.yc), r2(r.yc*0.8), r.lastY==null?'s/d':r.lastY, r.n]);
+    paint(row.getCell(4), r.lastC, r.corners*0.8);
+    paint(row.getCell(7), r.lastSg, r.sot*0.8);
+    paint(row.getCell(10), r.lastSh, r.shots*0.8);
+    paint(row.getCell(13), r.lastY, r.yc*0.8);
+  });
+  ws.views=[{state:'frozen', ySplit:1, xSplit:1}];
+  ws.columns.forEach(col=>{ let max=8; col.eachCell({includeEmpty:true},c=>{ const l=(c.value==null?'':String(c.value)).length; if(l>max)max=l; }); col.width=Math.min(max+2,40); });
+  const buf=await wb.xlsx.writeBuffer();
+  download(`liga_${season}.xlsx`, buf, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+}
+
+/* ---------- Al abrir: recupera clave y reusa caché (cero peticiones) ---------- */
+window.addEventListener('load',()=>{
+  const k=localStorage.getItem('bt:key'); if(k)$('apiKey').value=k;
+  // Si ya cargaste el catálogo de ligas antes, lo recuperamos de caché sin pedir nada
+  const cachedLeagues=Cache.get('req:/leagues');
+  if(cachedLeagues){
+    applyLeagues(cachedLeagues);
+    setStatus('Ligas listas desde caché ('+LEAGUES.length+'). Escribe para buscar — sin gastar cuota.','ok');
+  }
+});
+$('apiKey').addEventListener('change',e=>localStorage.setItem('bt:key',e.target.value.trim()));
+</script>
+</body>
+</html>
