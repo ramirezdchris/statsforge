@@ -15,7 +15,7 @@
     "prisma:migrate": "prisma migrate dev",
     "db:seed": "prisma db seed",
     "db:studio": "prisma studio",
-    "start": "nest start",
+    "start": "pnpm start:deploy",
     "start:dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/main",
